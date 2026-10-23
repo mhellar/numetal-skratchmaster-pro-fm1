@@ -20,7 +20,7 @@
  *   LFO        hold = CUT (crossfader on 32nds)        latch CUT
  *   HOME       DJ / BEAT                               pitch back to 0
  *   OCT- OCT+  the deck's pitch, a semitone            BACKSPIN / BRAKE (the turntable's power cut)
- *   SAVE       save everything now
+ *   SAVE       save everything now                     SYNC: AUTO / SEND / OFF
  *   EDIT       hold = SHIFT: the screen shows the second layer
  *
  *   encoder    turn                                    EDIT held + turn
@@ -33,6 +33,8 @@
  *   PRESETS    GROOVE                                  DECK level
  *   FX: FILTER CRUSH RADIO RING CRUNCH STUTTER REVERSE.  GROOVES: OFF BOOM BAP BREAK ELECTRO HALFTIME RAP METAL TRAP.
  *   USB-MIDI   channel 10 notes 36..47 = the kit; other channels notes 48..74 = the 27 words
+ *   MIDI SYNC  AUTO: an incoming clock (24 ppqn) leads, Start / Stop / Continue drive PLAY; without one the FM-1
+ *              sends its clock and Start / Stop. SEND: always leads. OFF: no clock either way.
  *
  * SAM: C core from earlephilhower/ESP8266SAM (GPL v3). Built on Dinghy / Felucca / SLOOP (GPL v3). */
 #define APP_NAME "CYBERSKRATCH"
@@ -150,6 +152,10 @@ static volatile int32_t p_rate = 16384;                 /* the deck's speed, Q16
 static volatile uint32_t p_groove = 1, p_roll, p_restart;
 static volatile uint32_t p_cut, p_freeze, p_drop, p_fill;   /* held performance moves */
 static volatile uint32_t p_spin, p_brake;                  /* one-shots: counters, the ISR acts when they move */
+static volatile uint32_t p_ext, p_ext_ticks, p_ext_start;  /* MIDI clock in: following, ticks since Start, Starts */
+static volatile uint32_t p_send_clock;                     /* MIDI clock out: leading */
+static volatile uint32_t mo_buf[32], mo_w, mo_r;           /* the main loop's MIDI out; the ISR sends it (one producer) */
+static void out_msg(uint32_t st, uint32_t d1, uint32_t d2) { if (mo_w - mo_r < 32u) { mo_buf[mo_w % 32u] = st | d1 << 8 | d2 << 16; mo_w++; } }
 enum { CMD_SAY, CMD_SCR, CMD_LET };
 static volatile uint32_t cmd_n, cmd_kind, cmd_arg;      /* main: arg, kind, then n++ */
 static volatile uint32_t drum_n, drum_mask;             /* main: live drum hits (bits), then n++ */
@@ -159,7 +165,7 @@ static volatile uint32_t jog_held;                      /* main: 1 while the jog
 /* ISR -> main */
 static volatile int32_t dk_word_v = -1;
 static volatile uint32_t dk_pos_v, dk_on_v, dk_rot_v, dk_fader_v, seq_step_v, seq_frac_v, drum_hit_v, fx_state_v;
-enum { ST_SPIN = 1, ST_BRAKE = 2, ST_MUTED = 4 };
+enum { ST_SPIN = 1, ST_BRAKE = 2, ST_MUTED = 4, ST_WAIT = 8 };
 
 /* the sequencer: 16 steps */
 #define SEQ_SCR 1u
@@ -275,17 +281,40 @@ static void scratch_shape(uint32_t f, int32_t *shape, int32_t *gate)   /* f = 0.
 
 static void app_audio(int32_t *out, uint32_t n)
 {
-    static uint32_t clk, stepn, restarted, cmd_seen, drum_seen, crush_h, ring_ph, ew, rot, half_done;
-    static uint32_t spin_seen, brake_seen, braking, muted, slam, was_held, fill_n, frz_was;
-    static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y, cur_len = 7190;
+    static uint32_t G, gacc, stepn, restarted, cmd_seen, drum_seen, crush_h, ring_ph, ew, rot, half_done;
+    static uint32_t spin_seen, brake_seen, braking, brake_g0, muted, slam, was_held, fill_n, frz_was;
+    static uint32_t ext_seen, ext_start_seen, ext_wait, tick_acc, play_was;
+    static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y;
     int32_t dbuf[64], vbuf[64];
     uint32_t off;
     const uint32_t fx = p_fx, amt = p_amt, play = p_play, hard = p_hard, steplen = p_steplen;
     const uint32_t freeze = p_freeze, drop = p_drop, fill = p_fill, held = drop | fill;
-    int32_t rate0 = p_rate;
+    const int32_t rate_base = p_rate;
+    int32_t rate0 = rate_base;
     const int32_t dl_gain = (int32_t)p_dlvl * 2731, vl_gain = (int32_t)p_vlvl * 2731;   /* 12 = unity */
 
-    if (p_restart != restarted) { restarted = p_restart; clk = 0; stepn = 0; braking = 0; muted = 0; }
+    /* the clock: G = where the song is, in 16ths (Q16). Steps fire as G passes them (odd ones later with swing). */
+    if (p_restart != restarted) { restarted = p_restart; G = 0; gacc = 0; stepn = 0; braking = 0; muted = 0; tick_acc = 65536u; }
+    if (p_ext_start != ext_start_seen) {        /* MIDI Start: back to the top, wait for the first tick */
+        ext_start_seen = p_ext_start; G = 0; gacc = 0; stepn = 0; braking = 0; muted = 0; ext_wait = 1; ext_seen = 0;
+    }
+    if (p_ext && p_ext_ticks != ext_seen) {     /* following: pull the grid onto the incoming ticks */
+        const uint32_t t = p_ext_ticks - 1u, target = (t / 6u << 16) + (t % 6u) * 65536u / 6u;
+        int32_t err;
+        ext_seen = p_ext_ticks;
+        if (ext_wait) { ext_wait = 0; G = target; }
+        err = (int32_t)(target - G);
+        if (err > (2 << 16) || err < -(2 << 16)) { G = target; stepn = (G >> 16) + ((G & 0xFFFFu) != 0u); }
+        else G += (uint32_t)(err / 8);          /* gently: the main loop's timing is a little loose */
+    }
+    if (!p_ext) ext_wait = 0;
+    while (mo_r != mo_w) {                      /* MIDI out: the notes from the main loop */
+        const uint32_t q = mo_buf[mo_r % 32u];
+        midi_send(q & 0xFFu, q >> 8 & 0x7Fu, q >> 16 & 0x7Fu);
+        mo_r++;
+    }
+    if (p_send_clock && play != play_was) midi_send(play ? 0xFAu : 0xFCu, 0, 0);   /* leading: Start / Stop */
+    play_was = play;
     if (cmd_n != cmd_seen) {
         cmd_seen = cmd_n;
         if (cmd_kind == CMD_LET) { if (dk.mode == DK_SCR) dk.mode = DK_LET; }
@@ -312,8 +341,7 @@ static void app_audio(int32_t *out, uint32_t n)
         if (play) muted = 1;
     }
     /* BRAKE: the turntable's power cut, a bar slowing down to nothing, then back on the one */
-    if (p_brake != brake_seen) { brake_seen = p_brake; if (play) braking = 1; }
-    if (braking) rate0 = (int32_t)((uint32_t)rate0 * steplen / (uint32_t)cur_len);   /* the deck slows with the beat */
+    if (p_brake != brake_seen) { brake_seen = p_brake; if (play && !p_ext) { braking = 256; brake_g0 = G; } }
 
     /* FREEZE: loop a sliver of the word */
     if (freeze && !frz_was && dk.word >= 0 && !bank_busy) {
@@ -345,54 +373,74 @@ static void app_audio(int32_t *out, uint32_t n)
         int32_t gate = 1, ft;
 
         /* ---- the clock, once per block */
-        if (clk < m) {
-            uint32_t s = stepn & 15u, g = groove_mask[p_groove % NGROOVES][s] | seq_drum[s];
-            uint32_t sw = steplen * p_swing / 40u;              /* swing: the off 16ths late */
-            cur_len = (int32_t)(s & 1u ? steplen + sw : steplen - sw);
-            if (braking) {                                      /* slower every step */
-                cur_len += (int32_t)(steplen * braking * braking / 6u);
-                if (++braking > 9u) { braking = 0; muted = 1; }
+        rate0 = rate_base;
+        {
+            uint32_t ginc, due = 0;
+            gacc += m << 16;
+            ginc = gacc / steplen;
+            gacc -= ginc * steplen;
+            if (braking) {                                      /* BRAKE: slower and slower over 9 steps */
+                const uint32_t gone = (G - brake_g0) >> 8;
+                braking = gone >= 9u * 240u ? 0u : 256u - gone / 9u;
+                if (!braking) muted = 1;
+                ginc = ginc * braking >> 8;
+                rate0 = rate0 * (int32_t)braking >> 8;
             }
-            clk += (uint32_t)cur_len;
-            half_done = 0;
-            if (muted && s == 0u) { muted = 0; slam = 1; }
-            if (play && !muted) {
-                if (drop) g &= HATS;                            /* DROP: only the hats stay */
-                if (fill) {                                     /* FILL: a snare roll, toms at the end */
-                    g = (g & HATS) | 1u << D_SNARE;
-                    if (fill_n >= 6u && fill_n & 1u) g |= 1u << (fill_n & 2u ? D_TOMH : D_TOML);
-                    fill_n++;
-                } else fill_n = 0;
-                if (slam && !held) { g |= 1u << D_CRASH | 1u << D_KICK; slam = 0; }
-                for (d = 0; d < NDRUM; d++) if (g >> d & 1u) drum_hit(d);
-                if (seq_word[s] >= 0 && !seq_skip[s] && dk.mode != DK_FRZ && dk.mode != DK_SPIN)
-                    deck_start(seq_word[s], seq_flag[s] & SEQ_SCR ? CMD_SCR : CMD_SAY, 1);
-                if (p_auto && dk.mode != DK_FRZ) {              /* the robot DJ */
-                    uint32_t r = noise() >> 24;
-                    if ((s == 0 && r < 180) || (s == 8 && r < 100) || (s == 6 && r < 30))
-                        deck_start((int32_t)(noise() >> 8) % NWORDS, CMD_SAY, 0);
-                    else if ((s == 12 && r < 90) || (s == 4 && r < 40))
-                        deck_start(dk.word >= 0 ? dk.word : 0, CMD_SCR, 1);
+            if (ext_wait) ginc = 0;
+            G += ginc;
+            dk.ph += ginc >> 2;                                 /* scratches move in beats */
+            if (p_send_clock) {                                 /* leading: 24 ticks a beat = 6 a step */
+                tick_acc += ginc * 6u;
+                while (tick_acc >= 65536u) { tick_acc -= 65536u; midi_send(0xF8u, 0, 0); }
+            }
+            while (due < 2u) {
+                const uint32_t s = stepn & 15u, at = (stepn << 16) + (s & 1u ? p_swing * 65536u / 40u : 0u);
+                uint32_t g;
+                if ((int32_t)(G - at) < 0) break;
+                due++;
+                g = groove_mask[p_groove % NGROOVES][s] | seq_drum[s];
+                half_done = 0;
+                if (muted && s == 0u) { muted = 0; slam = 1; }
+                if (play && !muted) {
+                    if (drop) g &= HATS;                            /* DROP: only the hats stay */
+                    if (fill) {                                     /* FILL: a snare roll, toms at the end */
+                        g = (g & HATS) | 1u << D_SNARE;
+                        if (fill_n >= 6u && fill_n & 1u) g |= 1u << (fill_n & 2u ? D_TOMH : D_TOML);
+                        fill_n++;
+                    } else fill_n = 0;
+                    if (slam && !held) { g |= 1u << D_CRASH | 1u << D_KICK; slam = 0; }
+                    for (d = 0; d < NDRUM; d++) if (g >> d & 1u) drum_hit(d);
+                    if (seq_word[s] >= 0 && !seq_skip[s] && dk.mode != DK_FRZ && dk.mode != DK_SPIN)
+                        deck_start(seq_word[s], seq_flag[s] & SEQ_SCR ? CMD_SCR : CMD_SAY, 1);
+                    if (p_auto && dk.mode != DK_FRZ) {              /* the robot DJ */
+                        uint32_t r = noise() >> 24;
+                        if ((s == 0 && r < 180) || (s == 8 && r < 100) || (s == 6 && r < 30))
+                            deck_start((int32_t)(noise() >> 8) % NWORDS, CMD_SAY, 0);
+                        else if ((s == 12 && r < 90) || (s == 4 && r < 40))
+                            deck_start(dk.word >= 0 ? dk.word : 0, CMD_SCR, 1);
+                    }
                 }
-            }
-            seq_skip[s] = 0;
-            for (d = 0; d < NDRUM; d++) if (p_roll >> d & 1u) drum_hit(d);
-            if (fx == FX_STUTTER && dk.mode == DK_PLAY && dk.stut_n < 6u) {   /* stutter: back to the slice's start */
-                uint32_t every = amt < 6u ? 1u : amt < 11u ? 2u : 4u;
-                if (!(s % every)) {
-                    if (!dk.stut_n) dk.stut = (uint32_t)dk.pos;
-                    else dk.pos = (int32_t)dk.stut;
-                    dk.stut_n++;
+                seq_skip[s] = 0;
+                for (d = 0; d < NDRUM; d++) if (p_roll >> d & 1u) drum_hit(d);
+                if (fx == FX_STUTTER && dk.mode == DK_PLAY && dk.stut_n < 6u) {   /* stutter: back to the slice's start */
+                    uint32_t every = amt < 6u ? 1u : amt < 11u ? 2u : 4u;
+                    if (!(s % every)) {
+                        if (!dk.stut_n) dk.stut = (uint32_t)dk.pos;
+                        else dk.pos = (int32_t)dk.stut;
+                        dk.stut_n++;
+                    }
                 }
+                seq_step_v = stepn++;
             }
-            seq_step_v = stepn++;
+            {
+                const uint32_t into = G - ((stepn - 1u) << 16);
+                seq_frac_v = into >= 65536u ? 255u : into >> 8;
+            }
+            if (fill && play && !muted && fill_n > 8u && !half_done && seq_frac_v >= 128u) {
+                half_done = 1;                                  /* the second half of a fill: 32nds */
+                drum_hit(D_SNARE);
+            }
         }
-        clk -= m;
-        if (fill && play && !muted && fill_n > 8u && !half_done && clk < (uint32_t)cur_len / 2u) {
-            half_done = 1;                                      /* the second half of a fill: 32nds */
-            drum_hit(D_SNARE);
-        }
-        seq_frac_v = ((uint32_t)cur_len - clk) * 256u / (uint32_t)cur_len;
 
         /* ---- the deck: where the record goes this block */
         if (dk.word >= 0 && !bank_busy) {
@@ -405,7 +453,6 @@ static void app_audio(int32_t *out, uint32_t n)
             case DK_FRZ: dk.rate = rate0; break;
             case DK_SCR: {
                 int32_t shape, target;
-                dk.ph += (m << 16) / (4u * (uint32_t)cur_len);
                 if (dk.ph >= 65536u) { dk.ph &= 65535u; if (dk.once) { dk.mode = DK_LET; break; } }
                 scratch_shape(dk.ph, &shape, &gate);
                 target = (shape * (int32_t)(2600u + p_reach * 800u)) << 1;   /* Q16 */
@@ -590,7 +637,7 @@ static void app_audio(int32_t *out, uint32_t n)
     dk_on_v = dk.mode != DK_OFF;
     dk_fader_v = (uint32_t)dk.fader;
     dk_rot_v = rot;
-    fx_state_v = (dk.mode == DK_SPIN ? ST_SPIN : 0u) | (braking ? ST_BRAKE : 0u) | (muted ? ST_MUTED : 0u);
+    fx_state_v = (dk.mode == DK_SPIN ? ST_SPIN : 0u) | (braking ? ST_BRAKE : 0u) | (muted ? ST_MUTED : 0u) | (ext_wait ? ST_WAIT : 0u);
 }
 
 /* =========================================================================== the screen */
@@ -713,7 +760,7 @@ static void draw_pads(const uint32_t *hit_t, uint32_t now)   /* BEAT mode: the k
 static void draw_cheat(void)                    /* EDIT held: what the buttons do now */
 {
     static const char *const L[8] = {"OCT- BACKSPIN", "OCT+ BRAKE", "PLAY TAP BPM", "ARP  MUTATE",
-                                     "SEQ  CLEAR", "REC  CLR WORDS", "ENV/LFO LATCH", "HOME PITCH 0"};
+                                     "SEQ  CLEAR", "REC  CLR WORDS", "ENV/LFO LATCH", "SAVE SYNC"};
     uint32_t k;
     cv_begin(240, 64, C_DEEP);
     for (k = 0; k < 8u; k++) cv_text(4 + (int32_t)(k & 1u) * 120, (int32_t)(k >> 1) * 16, &FONT_S, L[k], C_YEL);
@@ -783,6 +830,11 @@ static void draw_chips(uint32_t play, uint32_t rec, uint32_t aut, uint32_t hard,
 }
 
 /* =========================================================================== the main loop */
+#ifdef DINGHY_HOST
+#define NOW_US() (fm1_ms * 1000u)
+#else
+#define NOW_US() fm1_micros()
+#endif
 static int32_t clampi(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 static void deck_cmd(uint32_t kind, uint32_t arg) { cmd_arg = arg; cmd_kind = kind; cmd_n++; }
 static void drums_now(uint32_t mask) { drum_mask = mask; drum_n++; }
@@ -804,7 +856,7 @@ static void mutate(void)                        /* MUTATE: ghost notes, a new wo
 static void app_main(void)
 {
     struct {                                    /* what survives a power-off */
-        uint8_t fx, amt[FX_COUNT], echo, etime, style, reach, voice, groove, hard, beat, aut, swing, tune, decay, dlvl, vlvl;
+        uint8_t fx, amt[FX_COUNT], echo, etime, style, reach, voice, groove, hard, beat, aut, swing, tune, decay, dlvl, vlvl, sync;
         int8_t semi, pad;
         uint16_t bpm;
         int8_t word[16];
@@ -817,6 +869,7 @@ static void app_main(void)
     uint32_t t_down[27] = {0}, scr[27] = {0}, qstep[27] = {0}, hit_t[NDRUM] = {0}, taps[4] = {0}, ntap = 0;
     int32_t word_drawn = -2, held_word[27];
     char toast[24];
+    uint32_t ext_us[49], ext_n = 0, ext_ticks = 0, t_tick = 0, ext_live = 0, ext_bpm = 0, ext_len = 0;
 
     for (k = 0; k < sizeof set; k++) ((uint8_t *)&set)[k] = 0;
     for (k = 0; k < FX_COUNT; k++) set.amt[k] = 7;
@@ -833,6 +886,7 @@ static void app_main(void)
     if (set.decay > 4u) set.decay = 2;
     if (set.dlvl > 15u) set.dlvl = 12;
     if (set.vlvl > 15u) set.vlvl = 12;
+    set.sync %= 3u;
     set.semi = (int8_t)clampi(set.semi, -12, 12);
     set.bpm = (uint16_t)clampi(set.bpm, 60, 180);
     for (s = 0; s < 16u; s++) {
@@ -944,6 +998,13 @@ static void app_main(void)
             if (b & (1u << BTN_OCT_DOWN) && set.semi > -12) { set.semi--; chips = dirty = 1; }
             if (b & (1u << BTN_OCT_UP) && set.semi < 12) { set.semi++; chips = dirty = 1; }
         }
+        if (shift && b & (1u << BTN_SAVE)) {           /* SYNC: AUTO (follow MIDI clock, else send it) / SEND / OFF */
+            static const char *const SY[3] = {"AUTO", "SEND", "OFF"};
+            set.sync = (uint8_t)((set.sync + 1u) % 3u);
+            TOAST("SYNC", SY[set.sync]);
+            dirty = 1;
+            b &= ~(1u << BTN_SAVE);
+        }
         if (b & (1u << BTN_SAVE)) {                     /* SAVE: now (the sound skips for a moment) */
             for (s = 0; s < 16u; s++) { set.word[s] = seq_word[s]; set.flag[s] = seq_flag[s]; set.drum[s] = seq_drum[s]; }
             settings_save(&set, sizeof set);
@@ -960,7 +1021,11 @@ static void app_main(void)
         p_freeze = (btn >> BTN_ENV & 1u && !shift) || frz_latch;
         p_drop = btn >> BTN_SEL & 1u;
         p_fill = btn >> BTN_SEQ & 1u && !shift;
-        p_steplen = 661500u / set.bpm;
+        if (ext_n && now - t_tick > 400u) ext_n = 0;    /* the clock stopped coming */
+        ext_live = set.sync == 0u && ext_n >= 3u && ext_len;
+        p_ext = ext_live;
+        p_send_clock = set.sync != 2u && !ext_live;
+        p_steplen = ext_live ? ext_len : 661500u / set.bpm;
         p_rate = (int32_t)((16384u * (uint32_t)PITCH[set.semi + 12]) >> 15);
 
         /* ---- the keys */
@@ -978,12 +1043,12 @@ static void app_main(void)
                     t_down[k] = now; scr[k] = 0; qstep[k] = q;
                     if (dr_i >= 0) {
                         drums_now(1u << dr_i);
-                        midi_send(0x99, 36u + (uint32_t)dr_i, 110);
+                        out_msg(0x99, 36u + (uint32_t)dr_i, 110);
                         if (rec && play) { seq_drum[q] |= (uint16_t)(1u << dr_i); if (late) seq_skip[q] = 1; dirty = 1; }
                     } else {
                         held_word[k] = w;
                         deck_cmd(CMD_SAY, (uint32_t)w);
-                        midi_send(0x90, 48u + (uint32_t)w, 110);
+                        out_msg(0x90, 48u + (uint32_t)w, 110);
                         if (rec && play) { seq_word[q] = (int8_t)w; seq_flag[q] = 0; if (late) seq_skip[q] = 1; dirty = 1; }
                     }
                 }
@@ -997,7 +1062,7 @@ static void app_main(void)
                 }
                 if (up >> k & 1u) {
                     if (scr[k]) deck_cmd(CMD_LET, 0);
-                    if (held_word[k] >= 0) midi_send(0x80, 48u + (uint32_t)held_word[k], 0);
+                    if (held_word[k] >= 0) out_msg(0x80, 48u + (uint32_t)held_word[k], 0);
                     held_word[k] = -1;
                     scr[k] = 0;
                 }
@@ -1005,6 +1070,24 @@ static void app_main(void)
             p_roll = roll;
         }
         while (midi_get(&st, &d1, &d2)) {       /* USB-MIDI in */
+            if (st >= 0xF8u) {                  /* clock and transport */
+                if (set.sync != 0u) continue;   /* only AUTO follows */
+                if (st == 0xF8u) {
+                    ext_us[ext_n % 49u] = NOW_US();
+                    ext_n++;
+                    ext_ticks++;
+                    t_tick = now;
+                    p_ext_ticks = ext_ticks;
+                    if (ext_n >= 3u) {          /* the tempo over the last (up to) 48 ticks */
+                        const uint32_t k2 = ext_n - 1u < 48u ? ext_n - 1u : 48u;
+                        const uint32_t per = (ext_us[(ext_n - 1u) % 49u] - ext_us[(ext_n - 1u - k2) % 49u]) / k2;
+                        if (per > 4000u && per < 60000u) { ext_len = per * 2646u / 10000u; ext_bpm = (2500000u + per / 2u) / per; }
+                    }
+                } else if (st == 0xFAu) { ext_ticks = 0; p_ext_ticks = 0; p_play = play = 1; p_ext_start++; chips = 1; }
+                else if (st == 0xFBu) { p_play = play = 1; chips = 1; }
+                else if (st == 0xFCu) { p_play = play = 0; chips = 1; }
+                continue;
+            }
             if ((st & 0xF0u) != 0x90u || !d2) continue;
             if ((st & 0x0Fu) == 9u) { if (d1 >= 36u && d1 < 48u) drums_now(1u << (d1 - 36u)); }
             else if (d1 >= 48u && d1 < 48u + NBANK) deck_cmd(CMD_SAY, d1 - 48u);
@@ -1063,8 +1146,13 @@ static void app_main(void)
             else if (p_freeze) now_s = "FREEZE";
             else if (p_cut) now_s = "CUT";
             else if (fs & ST_MUTED) now_s = "...";
-            else { char *p = put(bpm_s, set.beat ? "BEAT " : "DJ "); put_u(p, set.bpm); now_s = bpm_s; now_c = C_CYAN; }
-            key = (uint32_t)now_s[0] * 7u + (uint32_t)now_s[1] + rec * 1000u + (now_c == C_CYAN) * set.bpm * 3u + set.beat * 99991u;
+            else if (fs & ST_WAIT) now_s = "SYNC...";
+            else {
+                char *p = put(bpm_s, ext_live ? "EXT " : set.beat ? "BEAT " : "DJ ");
+                put_u(p, ext_live ? ext_bpm : set.bpm);
+                now_s = bpm_s; now_c = ext_live ? C_YEL : C_CYAN;
+            }
+            key = (uint32_t)now_s[0] * 7u + (uint32_t)now_s[1] + rec * 1000u + (ext_live ? ext_bpm : set.bpm) * 3u + set.beat * 99991u + ext_live * 7777u;
             if (key != top_key) { top_key = key; draw_top(now_s, now_c, rec); }
 
             /* the big line: a toast for a moment, else the word */
