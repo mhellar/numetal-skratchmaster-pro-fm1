@@ -24,14 +24,22 @@
  *   EDIT       hold = SHIFT: the screen shows the second layer
  *
  *   encoder    turn                                    EDIT held + turn
- *   SELECT     JOG: scratch by hand                    SWING
- *   ALGORITHM  STYLE: BABY CHIRP TRANSFORM TEAR FLARE CRAB   REACH (how far the scratch goes)
+ *   SELECT     JOG: scratch by hand (VELOCITY)          VELOCITY FX: the flick drives the FX
+ *   ALGORITHM  STYLE: BABY CHIRP TRANSFORM TEAR FLARE CRAB   SWING
  *   KNOB1      the FX's amount                         KIT TUNE (-6..+6)
  *   KNOB2      ECHO                                    ECHO TIME (1/16 1/8 3/16 1/4)
  *   KNOB3      BPM 60..180                             KIT DECAY
  *   KNOB4      SAM VOICE (renders the bank again)      DRUMS level
- *   PRESETS    GROOVE                                  DECK level
+ *   PRESETS    GROOVE                                  REACH (how far a held-key scratch goes)
  *   FX: FILTER CRUSH RADIO RING CRUNCH STUTTER REVERSE.  GROOVES: OFF BOOM BAP BREAK ELECTRO HALFTIME RAP METAL TRAP.
+ *
+ *   VELOCITY SKRATCH (the keys have no velocity: it is read from how fast you move)
+ *     JOG     the faster the flick, the further each click throws the record; let go mid-flick and it spins
+ *             on at that speed and drifts back to normal (pull it back, let go: the rewind)
+ *     TAPS    tap the same word again quickly: finger strokes, back and forth, one a tap; faster taps =
+ *             faster, longer strokes, slow taps = a slow drag
+ *     EDIT +  the same moves pump the current FX instead (clockwise / taps up, anticlockwise down); it falls
+ *             back when you stop
  *   USB-MIDI   channel 10 notes 36..47 = the kit; other channels notes 48..74 = the 27 words
  *   MIDI SYNC  AUTO: an incoming clock (24 ppqn) leads, Start / Stop / Continue drive PLAY; without one the FM-1
  *              sends its clock and Start / Stop. SEND: always leads. OFF: no clock either way.
@@ -154,16 +162,22 @@ static volatile uint32_t p_cut, p_freeze, p_drop, p_fill;   /* held performance 
 static volatile uint32_t p_spin, p_brake;                  /* one-shots: counters, the ISR acts when they move */
 static volatile uint32_t p_ext, p_ext_ticks, p_ext_start;  /* MIDI clock in: following, ticks since Start, Starts */
 static volatile uint32_t p_send_clock;                     /* MIDI clock out: leading */
-static volatile uint32_t mo_buf[32], mo_w, mo_r;           /* the main loop's MIDI out; the ISR sends it (one producer) */
-static void out_msg(uint32_t st, uint32_t d1, uint32_t d2) { if (mo_w - mo_r < 32u) { mo_buf[mo_w % 32u] = st | d1 << 8 | d2 << 16; mo_w++; } }
-enum { CMD_SAY, CMD_SCR, CMD_LET };
+static volatile uint32_t app_mo_buf[32], app_mo_w, app_mo_r;   /* the main loop's MIDI out; the ISR sends it (one producer) */
+static void out_msg(uint32_t st, uint32_t d1, uint32_t d2) { if (app_mo_w - app_mo_r < 32u) { app_mo_buf[app_mo_w % 32u] = st | d1 << 8 | d2 << 16; app_mo_w++; } }
+enum { CMD_SAY, CMD_SCR, CMD_LET, CMD_STROKE };
 static volatile uint32_t cmd_n, cmd_kind, cmd_arg;      /* main: arg, kind, then n++ */
+static volatile int32_t cmd_span;                       /* CMD_STROKE: how far, word samples (+ forward, - back) */
+static volatile uint32_t cmd_dur;                       /* CMD_STROKE: how long, frames */
+static volatile int32_t p_jog_gain = 140;               /* word samples a jog click moves: grows with the flick's speed */
+static volatile int32_t p_throw_rate;                   /* the record's speed when the jog lets go of it, Q16 */
+static volatile uint32_t p_throw;                       /* counter: a throw */
 static volatile uint32_t drum_n, drum_mask;             /* main: live drum hits (bits), then n++ */
 static volatile int32_t jog_total;                      /* main: detents turned, ever */
 static volatile uint32_t jog_held;                      /* main: 1 while the jog is being turned */
 
 /* ISR -> main */
 static volatile int32_t dk_word_v = -1;
+static volatile uint32_t dk_speed_v;                    /* |deck speed| in 1/16 of normal, for the meter */
 static volatile uint32_t dk_pos_v, dk_on_v, dk_rot_v, dk_fader_v, seq_step_v, seq_frac_v, drum_hit_v, fx_state_v;
 enum { ST_SPIN = 1, ST_BRAKE = 2, ST_MUTED = 4, ST_WAIT = 8 };
 
@@ -211,12 +225,14 @@ static const groove_t GROOVES[NGROOVES] = {
 static uint16_t groove_mask[NGROOVES][16];
 
 /* =========================================================================== the audio ISR */
-enum { DK_OFF, DK_PLAY, DK_SCR, DK_HAND, DK_LET, DK_SPIN, DK_FRZ };
+enum { DK_OFF, DK_PLAY, DK_SCR, DK_HAND, DK_LET, DK_SPIN, DK_FRZ, DK_THROW, DK_STROKE, DK_REST };
 static struct {
     int32_t word, pos, rate, hand, frz;         /* pos, hand, frz: Q16 word samples */
+    int32_t st_from, st_to;                     /* a finger stroke: from, to (Q16) */
+    uint32_t st_t, st_dur;                      /* frames into it, its length */
     uint32_t mode, ph, once, stut, stut_n;
     int32_t fader;
-} dk = {-1, 0, 0, 0, 0, DK_OFF, 0, 0, 0, 0, 0};
+} dk = {-1, 0, 0, 0, 0, 0, 0, 0, 0, DK_OFF, 0, 0, 0, 0, 0};
 static struct { int32_t env, nenv; uint32_t ph, inc, inc1, step, t; int32_t z1, z2; } dr[NDRUM];
 static int16_t echo_buf[12288] POOL;            /* at 22050 Hz: 0.55 s */
 static uint32_t nrng = 0x13579BDFu;
@@ -284,7 +300,7 @@ static void app_audio(int32_t *out, uint32_t n)
     static uint32_t G, gacc, stepn, restarted, cmd_seen, drum_seen, crush_h, ring_ph, ew, rot, half_done;
     static uint32_t spin_seen, brake_seen, braking, brake_g0, muted, slam, was_held, fill_n, frz_was;
     static uint32_t ext_seen, ext_start_seen, ext_wait, tick_acc, play_was;
-    static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y;
+    static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y, dcz;
     int32_t dbuf[64], vbuf[64];
     uint32_t off;
     const uint32_t fx = p_fx, amt = p_amt, play = p_play, hard = p_hard, steplen = p_steplen;
@@ -308,16 +324,30 @@ static void app_audio(int32_t *out, uint32_t n)
         else G += (uint32_t)(err / 8);          /* gently: the main loop's timing is a little loose */
     }
     if (!p_ext) ext_wait = 0;
-    while (mo_r != mo_w) {                      /* MIDI out: the notes from the main loop */
-        const uint32_t q = mo_buf[mo_r % 32u];
+    while (app_mo_r != app_mo_w) {              /* MIDI out: the notes from the main loop */
+        const uint32_t q = app_mo_buf[app_mo_r % 32u];
         midi_send(q & 0xFFu, q >> 8 & 0x7Fu, q >> 16 & 0x7Fu);
-        mo_r++;
+        app_mo_r++;
     }
     if (p_send_clock && play != play_was) midi_send(play ? 0xFAu : 0xFCu, 0, 0);   /* leading: Start / Stop */
     play_was = play;
     if (cmd_n != cmd_seen) {
         cmd_seen = cmd_n;
         if (cmd_kind == CMD_LET) { if (dk.mode == DK_SCR) dk.mode = DK_LET; }
+        else if (cmd_kind == CMD_STROKE) {      /* a finger stroke from wherever the record is */
+            const int32_t w = (int32_t)cmd_arg;
+            if (w >= 0 && w < NBANK && bank[w].len && !bank_busy) {
+                const int32_t len = (int32_t)bank[w].len << 16;
+                if (dk.word != w) { dk.word = w; dk.pos = 0; dk_word_v = w; }
+                dk.st_from = dk.pos < 0 ? 0 : dk.pos > len ? len : dk.pos;
+                dk.st_to = dk.st_from + cmd_span * 65536;
+                if (dk.st_to < 0) dk.st_to = 0;
+                if (dk.st_to > len) dk.st_to = len;
+                dk.st_t = 0;
+                dk.st_dur = cmd_dur < 256u ? 256u : cmd_dur;
+                dk.mode = DK_STROKE;
+            }
+        }
         else deck_start((int32_t)cmd_arg, cmd_kind, 0);
     }
     if (drum_n != drum_seen) {
@@ -361,12 +391,22 @@ static void app_audio(int32_t *out, uint32_t n)
         if (dk.word >= 0 && !bank_busy) {
             int32_t len = (int32_t)bank[dk.word].len << 16;
             if (dk.mode != DK_HAND) { dk.hand = dk.pos < 0 ? 0 : dk.pos > len ? len : dk.pos; dk.mode = DK_HAND; }
-            dk.hand += d * (300 << 16);
+            dk.hand += d * (p_jog_gain << 16);   /* velocity: a fast flick throws it further */
             if (dk.hand < 0) dk.hand = 0;
             if (dk.hand > len) dk.hand = len;
         }
     } else if (dk.mode == DK_HAND && !jog_held)
         dk.mode = DK_PLAY;                      /* let go: the record plays on */
+    {
+        static uint32_t throw_seen;
+        if (p_throw != throw_seen) {            /* let go mid-flick: it keeps spinning at that speed */
+            throw_seen = p_throw;
+            if (dk.word >= 0 && (dk.mode == DK_HAND || dk.mode == DK_PLAY || dk.mode == DK_THROW)) {
+                dk.mode = DK_THROW;
+                dk.rate = p_throw_rate;
+            }
+        }
+    }
 
     for (off = 0; off < n; off += 64u) {
         uint32_t m = n - off < 64u ? n - off : 64u, i, d;
@@ -462,12 +502,29 @@ static void app_audio(int32_t *out, uint32_t n)
             }
             case DK_HAND:
                 dk.rate = ((dk.hand - dk.pos) >> 2) / (int32_t)m;
-                if (dk.rate > 8 * rate0) dk.rate = 8 * rate0;
-                if (dk.rate < -8 * rate0) dk.rate = -8 * rate0;
+                if (dk.rate > 16 * rate0) dk.rate = 16 * rate0;
+                if (dk.rate < -16 * rate0) dk.rate = -16 * rate0;
                 break;
             case DK_SPIN:                                       /* the throw slows down */
                 dk.rate -= dk.rate >> 7;
                 if (dk.pos <= 0 || dk.rate > -(rate0 >> 3)) { dk.mode = DK_LET; gate = 0; }
+                break;
+            case DK_THROW:                                      /* thrown: drifts back to the motor's speed */
+                dk.rate += (rate0 - dk.rate) >> 6;
+                if (dk.rate - rate0 < (rate0 >> 4) && rate0 - dk.rate < (rate0 >> 4)) dk.mode = DK_PLAY;
+                if (dk.pos >= len || (dk.pos <= 0 && dk.rate < 0)) dk.mode = DK_LET;
+                break;
+            case DK_STROKE: {                                   /* a finger stroke, eased in and out */
+                int32_t target;
+                dk.st_t += m;
+                if (dk.st_t >= dk.st_dur) { dk.st_t = dk.st_dur; dk.mode = DK_REST; }
+                target = dk.st_from + ((dk.st_to - dk.st_from) >> 15) * (int32_t)bump((dk.st_t << 15) / dk.st_dur);
+                dk.rate = (target - dk.pos) / (int32_t)m;
+                break;
+            }
+            case DK_REST:                                       /* the finger holds the record: silence, then it is put away */
+                dk.rate = 0; gate = 0; dk.st_t += m;
+                if (dk.st_t > dk.st_dur + 66150u) dk.mode = DK_OFF;
                 break;
             case DK_LET: gate = 0; if (dk.fader < 64) dk.mode = DK_OFF; break;
             default: dk.rate = 0; gate = 0; break;
@@ -496,7 +553,9 @@ static void app_audio(int32_t *out, uint32_t n)
                     int32_t e1 = (pos - dk.frz) >> 16, e2 = (dk.frz + FRZ_WIN - pos) >> 16, e = e1 < e2 ? e1 : e2;
                     if (e < 160) s = (s * (e < 0 ? 0 : e)) / 160;
                 }
-                vbuf[i] = (s * fd) >> 15;
+                s = (s * fd) >> 15;
+                dcz += (s - dcz) >> 10;                         /* a still record is silence, not a step */
+                vbuf[i] = s - dcz;
                 pos += rate;
             }
             dk.pos = pos;
@@ -637,6 +696,10 @@ static void app_audio(int32_t *out, uint32_t n)
     dk_on_v = dk.mode != DK_OFF;
     dk_fader_v = (uint32_t)dk.fader;
     dk_rot_v = rot;
+    {
+        const int32_t r = dk.mode == DK_OFF || dk.mode == DK_REST ? 0 : dk.rate < 0 ? -dk.rate : dk.rate;
+        dk_speed_v = (uint32_t)(r / ((p_rate >> 4) + 1));
+    }
     fx_state_v = (dk.mode == DK_SPIN ? ST_SPIN : 0u) | (braking ? ST_BRAKE : 0u) | (muted ? ST_MUTED : 0u) | (ext_wait ? ST_WAIT : 0u);
 }
 
@@ -731,6 +794,11 @@ static void draw_deck(int32_t w, uint32_t pos, uint32_t rot, uint32_t on, uint32
     uint32_t k, len = w >= 0 ? bank[w].len : 0, head;
     cv_begin(240, 64, C_BLACK);
     platter(34, 32, rot, on, fader, acc);
+    {                                           /* the velocity meter: 1x at a quarter, 4x full */
+        const int32_t h = dk_speed_v > 64u ? 60 : (int32_t)(dk_speed_v * 60u / 64u);
+        cv_rect(69, 2, 3, 60, C_DEEP);
+        cv_rect(69, 62 - h, 3, h, h > 30 ? C_PINK : h > 15 ? C_YEL : C_CYAN);
+    }
     if (w != wave_word && w >= 0) wave_cache(w);
     head = len ? (uint32_t)((pos >> 16) * 160u / len) : 999u;
     for (k = 0; k < 160u; k++) {
@@ -869,6 +937,8 @@ static void app_main(void)
     uint32_t t_down[27] = {0}, scr[27] = {0}, qstep[27] = {0}, hit_t[NDRUM] = {0}, taps[4] = {0}, ntap = 0;
     int32_t word_drawn = -2, held_word[27];
     char toast[24];
+    int32_t jog_v = 0, fx_boost = 0, last_tap_w = -1, boost_shown = 0;
+    uint32_t t_boost = 0, t_tap = 0, tap_n = 0, t_loop = 0;
     uint32_t ext_us[49], ext_n = 0, ext_ticks = 0, t_tick = 0, ext_live = 0, ext_bpm = 0, ext_len = 0;
 
     for (k = 0; k < sizeof set; k++) ((uint8_t *)&set)[k] = 0;
@@ -928,12 +998,33 @@ static void app_main(void)
         /* ---- encoders: two layers, EDIT held = the second */
         {
             char v[12];
-            if ((e = fm1_enc_take(ENC_SELECT)) != 0) {
-                if (shift) { set.swing = (uint8_t)clampi(set.swing + e, 0, 10); put_u(v, set.swing * 10u); TOAST("SWING", v); knobs = dirty = 1; }
-                else { jog_total += e; jog_held = 1; t_jog = now; }
-            } else if (jog_held && now - t_jog > 250u) jog_held = 0;
+            if ((e = fm1_enc_take(ENC_SELECT)) != 0) {     /* the jog, and how fast it turns (clicks a second) */
+                const uint32_t dt = now - t_jog < 1u ? 1u : now - t_jog;
+                const int32_t inst = dt > 300u ? e * 3 : e * 1000 / (int32_t)dt;
+                jog_v = (jog_v * 3 + inst) / 4;
+                t_jog = now;
+                if (shift) {                                /* VELOCITY FX: the flick pumps the FX */
+                    const int32_t av = jog_v < 0 ? -jog_v : jog_v;
+                    fx_boost += e * (64 + av * 12);
+                    t_boost = now;
+                } else {
+                    const int32_t av = jog_v < 0 ? -jog_v : jog_v;
+                    p_jog_gain = av * 10 + 100 > 1600 ? 1600 : av * 10 + 100;
+                    jog_total += e; jog_held = 1;
+                }
+            } else if (jog_held && now - t_jog > ((jog_v > 12 || jog_v < -12) ? 60u : 300u)) {   /* let go: a fast flick throws the record */
+                const int32_t av = jog_v < 0 ? -jog_v : jog_v;
+                jog_held = 0;
+                if (av > 12) {
+                    int32_t r = jog_v * p_jog_gain * 3 / 2;      /* clicks/s * samples/click / 44100 * 65536 */
+                    r = r > 16 * p_rate ? 16 * p_rate : r < -16 * p_rate ? -16 * p_rate : r;
+                    p_throw_rate = r;
+                    p_throw++;
+                }
+                jog_v = 0;
+            } else if (now - t_jog > 300u) jog_v = 0;
             if ((e = fm1_enc_take(ENC_ALGORITHM)) != 0) {
-                if (shift) { set.reach = (uint8_t)clampi(set.reach + e, 0, 7); put_u(v, set.reach + 1u); TOAST("REACH", v); }
+                if (shift) { set.swing = (uint8_t)clampi(set.swing + e, 0, 10); put_u(v, set.swing * 10u); TOAST("SWING", v); }
                 else { set.style = (uint8_t)clampi(set.style + e, 0, SC_COUNT - 1); TOAST("", SC_NAME[set.style]); }
                 knobs = dirty = 1;
             }
@@ -958,7 +1049,7 @@ static void app_main(void)
                 knobs = dirty = 1;
             }
             if ((e = fm1_enc_take(ENC_PRESETS)) != 0) {
-                if (shift) { set.vlvl = (uint8_t)clampi(set.vlvl + e, 0, 15); put_u(v, set.vlvl); TOAST("DECK", v); }
+                if (shift) { set.reach = (uint8_t)clampi(set.reach + e, 0, 7); put_u(v, set.reach + 1u); TOAST("REACH", v); }
                 else { set.groove = (uint8_t)clampi(set.groove + e, 0, NGROOVES - 1); TOAST("", GROOVES[set.groove].name); }
                 knobs = dirty = 1;
             }
@@ -1014,7 +1105,15 @@ static void app_main(void)
         if (dirty && (knobs || chips)) t_change = now;
 
         /* ---- to the ISR */
-        p_fx = set.fx; p_amt = set.amt[set.fx]; p_echo = set.echo; p_etime = set.etime; p_style = set.style; p_reach = set.reach;
+        {                                       /* the FX boost falls back once the hand stops */
+            const uint32_t dt = now - t_loop;
+            t_loop = now;
+            if (fx_boost > 15 * 256) fx_boost = 15 * 256;
+            if (fx_boost < -15 * 256) fx_boost = -15 * 256;
+            if (now - t_boost > 120u && dt) fx_boost = fx_boost * (int32_t)(1024u - (dt * 4u > 1024u ? 1024u : dt * 4u)) / 1024;
+            if ((fx_boost >> 8) != boost_shown) { boost_shown = fx_boost >> 8; knobs = 1; }
+        }
+        p_fx = set.fx; p_amt = (uint32_t)clampi((int32_t)set.amt[set.fx] + (fx_boost >> 8), 0, 15); p_echo = set.echo; p_etime = set.etime; p_style = set.style; p_reach = set.reach;
         p_groove = set.groove; p_hard = set.hard; p_auto = set.aut; p_play = play; p_swing = set.swing;
         p_tune = set.tune; p_decay = set.decay; p_dlvl = set.dlvl; p_vlvl = set.vlvl;
         p_cut = (btn >> BTN_LFO & 1u && !shift) || cut_latch;
@@ -1046,8 +1145,27 @@ static void app_main(void)
                         out_msg(0x99, 36u + (uint32_t)dr_i, 110);
                         if (rec && play) { seq_drum[q] |= (uint16_t)(1u << dr_i); if (late) seq_skip[q] = 1; dirty = 1; }
                     } else {
+                        const uint32_t gap = now - t_tap;
                         held_word[k] = w;
-                        deck_cmd(CMD_SAY, (uint32_t)w);
+                        if (w == last_tap_w && gap < 450u && shift) {          /* EDIT + taps: pump the FX */
+                            fx_boost += (int32_t)(256u * 600u / (gap < 60u ? 60u : gap));
+                            t_boost = now;
+                            deck_cmd(CMD_SAY, (uint32_t)w);
+                        } else if (w == last_tap_w && gap < 450u) {             /* taps: finger strokes */
+                            const uint32_t g = gap < 60u ? 60u : gap;
+                            int32_t span = (int32_t)(1200u + 500000u / g);
+                            if (span > 8000) span = 8000;
+                            cmd_span = tap_n & 1u ? span : -span;               /* back first, then forward */
+                            cmd_dur = g * 31u;                                   /* 70 % of the gap, in frames */
+                            tap_n++;
+                            scr[k] = 2;                                          /* no held scratch on a stroke */
+                            deck_cmd(CMD_STROKE, (uint32_t)w);
+                        } else {
+                            tap_n = 0;
+                            deck_cmd(CMD_SAY, (uint32_t)w);
+                        }
+                        last_tap_w = w;
+                        t_tap = now;
                         out_msg(0x90, 48u + (uint32_t)w, 110);
                         if (rec && play) { seq_word[q] = (int8_t)w; seq_flag[q] = 0; if (late) seq_skip[q] = 1; dirty = 1; }
                     }
@@ -1061,7 +1179,7 @@ static void app_main(void)
                     }
                 }
                 if (up >> k & 1u) {
-                    if (scr[k]) deck_cmd(CMD_LET, 0);
+                    if (scr[k] == 1u) deck_cmd(CMD_LET, 0);
                     if (held_word[k] >= 0) out_msg(0x80, 48u + (uint32_t)held_word[k], 0);
                     held_word[k] = -1;
                     scr[k] = 0;
@@ -1138,7 +1256,8 @@ static void app_main(void)
             char bpm_s[16];
             uint32_t key;
             /* the top bar: the move happening now, else the mode and tempo */
-            if (shift) now_s = "SHIFT";
+            if (shift) now_s = "FLICK/TAP=FX";
+            else if (fx_boost > 255 || fx_boost < -255) now_s = "VELOCITY FX";
             else if (fs & ST_SPIN) now_s = "BACKSPIN";
             else if (fs & ST_BRAKE) now_s = "BRAKE";
             else if (p_fill) now_s = "FILL";
@@ -1182,11 +1301,11 @@ static void app_main(void)
                 cell_t a[4], c[3];
                 knobs = 0;
                 if (!shift) {
-                    a[0].label = FX_NAME[set.fx]; put_u(a[0].val, set.amt[set.fx]); a[0].bar = set.amt[set.fx]; a[0].of = 15;
+                    a[0].label = FX_NAME[set.fx]; put_u(a[0].val, p_amt); a[0].bar = p_amt; a[0].of = 15;
                     a[1].label = "ECHO"; put_u(a[1].val, set.echo); a[1].bar = set.echo; a[1].of = 15;
                     a[2].label = "BPM"; put_u(a[2].val, set.bpm); a[2].bar = set.bpm - 60u; a[2].of = 120;
                     a[3].label = "VOICE"; put(a[3].val, VOICES[set.voice].name); a[3].bar = 0; a[3].of = 0;
-                    c[0].label = "JOG"; put(c[0].val, "SCRATCH"); c[0].of = 0;
+                    c[0].label = "JOG"; put(c[0].val, "VELOCITY"); c[0].of = 0;
                     c[1].label = "STYLE"; put(c[1].val, SC_NAME[set.style]); c[1].of = 0;
                     c[2].label = "GROOVE"; put(c[2].val, GROOVES[set.groove].name); c[2].of = 0;
                 } else {
@@ -1194,9 +1313,9 @@ static void app_main(void)
                     a[1].label = "E.TIME"; put(a[1].val, ETIME_NAME[set.etime]); a[1].bar = set.etime; a[1].of = 3;
                     a[2].label = "DECAY"; put_s(a[2].val, (int32_t)set.decay - 2); a[2].bar = set.decay; a[2].of = 4;
                     a[3].label = "DRUMS"; put_u(a[3].val, set.dlvl); a[3].bar = set.dlvl; a[3].of = 15;
-                    c[0].label = "SWING"; put_u(c[0].val, set.swing * 10u); c[0].bar = set.swing; c[0].of = 10;
-                    c[1].label = "REACH"; put_u(c[1].val, set.reach + 1u); c[1].bar = set.reach; c[1].of = 7;
-                    c[2].label = "DECK"; put_u(c[2].val, set.vlvl); c[2].bar = set.vlvl; c[2].of = 15;
+                    c[0].label = "VEL FX"; put(c[0].val, "FLICK"); c[0].of = 0;
+                    c[1].label = "SWING"; put_u(c[1].val, set.swing * 10u); c[1].bar = set.swing; c[1].of = 10;
+                    c[2].label = "REACH"; put_u(c[2].val, set.reach + 1u); c[2].bar = set.reach; c[2].of = 7;
                 }
                 draw_knobs(a, c, shift, acc);
             }

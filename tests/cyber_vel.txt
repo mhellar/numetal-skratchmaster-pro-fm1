@@ -1,0 +1,13 @@
+900 keys 0x1
+960 keys 0
+1160 keys 0x1
+1220 keys 0
+1360 keys 0x1
+1420 keys 0
+1500 keys 0x1
+1540 keys 0
+1620 keys 0x1
+1650 keys 0
+1710 keys 0x1
+1740 keys 0
+8500 end
