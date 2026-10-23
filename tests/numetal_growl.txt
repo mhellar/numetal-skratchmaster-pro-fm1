@@ -1,0 +1,13 @@
+200 btn 2
+250 btn 2
+300 btn 2
+350 btn 2
+400 btn 2
+450 btn 2
+500 btn 2
+550 btn 2
+1000 keys 0x4000
+1100 keys 0
+3000 keys 0x1
+3100 keys 0
+5000 end

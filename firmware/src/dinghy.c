@@ -32,8 +32,11 @@
  *   KNOB3      BPM 60..180                             KIT DECAY
  *   KNOB4      SAM VOICE (renders the bank again)      DRUMS level
  *   PRESETS    GROOVE (and its riff)                   REACH (how far a held-key scratch goes)
- *   FX: FILTER CRUSH MEGAPHONE DEMON CRUNCH STUTTER REVERSE WAH.
- *   GROOVES: OFF BOUNCE B-BOY JUMP BREAKDOWN RAP METAL BOOM BAP STOMP TRAP.
+ *   FX: FILTER CRUSH MEGAPHONE DEMON CRUNCH STUTTER REVERSE WAH GROWL.
+ *   GROOVES: OFF BOUNCE B-BOY JUMP BREAKDOWN RAP METAL BOOM BAP STOMP TRAP SLUDGE.
+ *   GROWL: the sludge throat, Melvins style: the word slowed down 5..12 semitones, an octave under it (the octaver's
+ *   flip-flop), vocal fry (chopped by jittery pulses at 50..110 Hz), driven and darkened. In RAP MODE the hook is
+ *   always growled. The GROWL voice (KNOB4) is SAM at its lowest and slowest.
  *
  *   VELOCITY SKRATCH (the keys have no velocity: it is read from how fast you move)
  *     JOG     the faster the flick, the further each click throws the record; let go mid-flick and it spins
@@ -99,7 +102,7 @@ static const char *const SHOW[NBANK] = {        /* on screen */
 
 #define NVOICES 8
 static const struct { const char *name; uint8_t speed, pitch, throat, mouth; } VOICES[NVOICES] = {
-    {"MC", 62, 58, 150, 175}, {"GROWL", 78, 104, 110, 95}, {"ROBOT", 92, 60, 190, 190}, {"SAM", 72, 64, 128, 128}, {"ELF", 72, 64, 110, 160},
+    {"MC", 62, 58, 150, 175}, {"GROWL", 96, 150, 80, 80}, {"ROBOT", 92, 60, 190, 190}, {"SAM", 72, 64, 128, 128}, {"ELF", 72, 64, 110, 160},
     {"E.T.", 100, 64, 150, 200}, {"STUFFY", 82, 72, 110, 105}, {"OLD LADY", 82, 32, 145, 145}};
 
 SamData *samdata;
@@ -152,8 +155,8 @@ static void render_bank(uint32_t vi)
 }
 
 /* =========================================================================== shared state (main writes, ISR reads) */
-enum { FX_FILTER, FX_CRUSH, FX_MEGA, FX_DEMON, FX_CRUNCH, FX_STUTTER, FX_REVERSE, FX_WAH, FX_COUNT };
-static const char *const FX_NAME[FX_COUNT] = {"FILTER", "CRUSH", "MEGAPHONE", "DEMON", "CRUNCH", "STUTTER", "REVERSE", "WAH"};
+enum { FX_FILTER, FX_CRUSH, FX_MEGA, FX_DEMON, FX_CRUNCH, FX_STUTTER, FX_REVERSE, FX_WAH, FX_GROWL, FX_COUNT };
+static const char *const FX_NAME[FX_COUNT] = {"FILTER", "CRUSH", "MEGAPHONE", "DEMON", "CRUNCH", "STUTTER", "REVERSE", "WAH", "GROWL"};
 enum { SC_BABY, SC_CHIRP, SC_TRANS, SC_TEAR, SC_FLARE, SC_CRAB, SC_COUNT };
 static const char *const SC_NAME[SC_COUNT] = {"BABY", "CHIRP", "TRANSFORM", "TEAR", "FLARE", "CRAB"};
 
@@ -218,7 +221,7 @@ static const uint32_t CRASH_INC[6] = {19994485u, 29645987u, 35995916u, 50906562u
 /* the riff: '.' nothing, '0'..'9' a palm-muted chug that many semitones over the tuning's root, 'A'..'K' an open
  * power chord (A = the root, B = a half step up, G = the tritone, H = the fifth). */
 typedef struct { const char *name; const char *lane[4]; uint8_t drum[4]; const char *riff; } groove_t;
-#define NGROOVES 9
+#define NGROOVES 10
 static const groove_t GROOVES[NGROOVES] = {
     {"OFF",       {"................", "................", "................", "................"}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
                   "................"},
@@ -238,6 +241,8 @@ static const groove_t GROOVES[NGROOVES] = {
                   "0.0.0.0.0.0.D.F."},
     {"TRAP",      {"x......x..x.....", "........x.......", "x.x.xxx.x.x.xxxx", "x......x..x....."}, {D_KICK, D_CLAP, D_HAT, D_808},
                   "A......0..0....."},
+    {"SLUDGE",    {"x.......x.....x.", "........x.......", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_OPEN, D_CRASH},
+                  "A.......B.....G."},
 };
 #define NFLOWS 7
 static const char *const FLOWS[NFLOWS] = {      /* RAP MODE: where the words start in a bar */
@@ -253,6 +258,7 @@ static struct {
     uint32_t st_t, st_dur;                      /* frames into it, its length */
     uint32_t mode, ph, once, stut, stut_n;
     int32_t fader;
+    uint32_t growl;                             /* RAP MODE's hook: growled whatever the FX */
 } dk = {-1, 0, 0, 0, 0, 0, 0, 0, 0, DK_OFF, 0, 0, 0, 0, 0};
 static struct { int32_t env, nenv; uint32_t ph, inc, inc1, step, t; int32_t z1, z2; } dr[NDRUM];
 static int16_t echo_buf[12288] POOL;            /* at 22050 Hz: 0.55 s */
@@ -289,6 +295,30 @@ static void band_hit(uint32_t rc, uint32_t guitar)   /* a riff step: rc '0'..'9'
     bs.mute = !open;
 }
 
+static int32_t deck_speed(int32_t rate0, uint32_t fx, uint32_t amt)   /* DEMON and GROWL slow the record down */
+{
+    uint32_t down = dk.growl ? 9u : 0u;
+    if (fx == FX_DEMON) down = amt * 4u / 5u;
+    if (fx == FX_GROWL) down = 5u + amt * 7u / 15u;
+    return down ? (int32_t)(((uint32_t)rate0 * (uint32_t)PITCH[12u - down]) >> 15) : rate0;
+}
+
+static struct { int32_t det, env, lp; uint32_t up, ff, t, per; } gr;
+static int32_t growl(int32_t x, uint32_t amt)   /* the sludge throat: an octave under, vocal fry, driven, dark */
+{
+    int32_t y;
+    gr.det += ((x - gr.det) * 2600) >> 15;      /* the cycles, heard below ~600 Hz */
+    if (!gr.up && gr.det > 300) { gr.up = 1; gr.ff ^= 1u; }
+    else if (gr.up && gr.det < -300) gr.up = 0;
+    y = x + (((gr.ff ? x : -x) * (int32_t)(8u + amt)) >> 4);   /* every other cycle flipped: the octave below */
+    if (++gr.t >= gr.per) { gr.t = 0; gr.per = 400u + (noise() >> 23); gr.env = 32767; }   /* fry: 48..110 Hz, jittery */
+    gr.env -= gr.env >> 7;
+    y = ((y >> 2) * (10000 + ((gr.env * (int32_t)(10u + amt)) >> 4))) >> 15;
+    y = soft(y * 3);
+    gr.lp += ((y - gr.lp) * 9000) >> 15;        /* the chest */
+    return gr.lp;
+}
+
 static void rap_flow(uint32_t bar, uint32_t steplen)   /* RAP MODE: a bar of words that fit the gaps, a rhyme at the end */
 {
     static uint32_t rhyme;
@@ -317,6 +347,7 @@ static void deck_start(int32_t w, uint32_t kind, uint32_t once)
 {
     if (w < 0 || w >= NBANK || !bank[w].len || bank_busy) return;
     dk.word = w;
+    dk.growl = 0;
     dk.stut = 0; dk.stut_n = 0;
     if (kind == CMD_SCR) {
         dk.mode = DK_SCR; dk.ph = 0; dk.once = once; dk.pos = 0;
@@ -528,7 +559,7 @@ static void app_audio(int32_t *out, uint32_t n)
                         } else {
                             if (s == 0u) for (d = 0; d < 16u; d++) rap_line[d] = -1;
                             if (dk.mode != DK_FRZ && dk.mode != DK_SPIN && dk.mode != DK_HAND) {
-                                if (s == 0u || (s == 8u && bar & 1u)) deck_start((int32_t)p_hook, CMD_SAY, 0);
+                                if (s == 0u || (s == 8u && bar & 1u)) { deck_start((int32_t)p_hook, CMD_SAY, 0); dk.growl = 1; }
                                 else if (s == 8u) deck_start(ADLIB + 1 + (int32_t)((noise() >> 8) % 3u), CMD_SAY, 0);
                                 else if (s == 12u && (bar == 7u || (p_auto && noise() >> 30 == 0u)))
                                     deck_start((int32_t)p_hook, CMD_SCR, 1);   /* the scratch back into the verse */
@@ -569,10 +600,10 @@ static void app_audio(int32_t *out, uint32_t n)
             int32_t len = (int32_t)bank[dk.word].len << 16;
             switch (dk.mode) {
             case DK_PLAY:
-                dk.rate = fx == FX_REVERSE ? -rate0 : fx == FX_DEMON ? (int32_t)(((uint32_t)rate0 * (uint32_t)PITCH[12u - amt * 4u / 5u]) >> 15) : rate0;
+                dk.rate = fx == FX_REVERSE ? -rate0 : deck_speed(rate0, fx, amt);
                 if (dk.pos >= len || dk.pos < 0) dk.mode = DK_OFF;
                 break;
-            case DK_FRZ: dk.rate = fx == FX_DEMON ? (int32_t)(((uint32_t)rate0 * (uint32_t)PITCH[12u - amt * 4u / 5u]) >> 15) : rate0; break;
+            case DK_FRZ: dk.rate = deck_speed(rate0, fx, amt); break;
             case DK_SCR: {
                 int32_t shape, target;
                 if (dk.ph >= 65536u) { dk.ph &= 65535u; if (dk.once) { dk.mode = DK_LET; break; } }
@@ -709,7 +740,7 @@ static void app_audio(int32_t *out, uint32_t n)
             const uint32_t bk = braking ? braking : 256u;       /* BRAKE: the band winds down with the turntable */
             const uint32_t i0 = (gt.inc[0] >> 8) * bk, i1 = (gt.inc[1] >> 8) * bk, i2 = (gt.inc[2] >> 8) * bk;
             const uint32_t i3 = (gt.inc[3] >> 8) * bk, ib = (bs.inc >> 8) * bk;
-            const int32_t ta = gt.mute ? 5200 : 9500, gsh = gt.mute ? 11 : 14, bsh = bs.mute ? 11 : 14;
+            const int32_t ta = gt.mute ? 5200 : 9500, gsh = gt.mute ? 11 : 15, bsh = bs.mute ? 11 : 14;
             for (i = 0; i < m; i++) {
                 int32_t x = 0, b2;
                 if (gt.env > 4096) {
@@ -734,6 +765,7 @@ static void app_audio(int32_t *out, uint32_t n)
         /* ---- FX on the deck, the echo, the mix */
         for (i = 0; i < m; i++) {
             int32_t x = vbuf[i], o, dd;
+            if (dk.growl && fx != FX_GROWL) x = growl(x, 9u);
             switch (fx) {
             case FX_FILTER:                                      /* 0..6 low-pass, 7..8 open, 9..15 high-pass */
                 if (amt < 7u) { f1 += ((x - f1) * (int32_t)(1500u + amt * 4200u)) >> 15; x = f1; }
@@ -753,6 +785,7 @@ static void app_audio(int32_t *out, uint32_t n)
             case FX_DEMON:                                       /* the deck slowed (above), and dirtied */
                 x = soft(x + (x >> 1));
                 break;
+            case FX_GROWL: x = growl(x, amt); break;
             case FX_WAH: {                                       /* a resonant band-pass: the amount is the pedal */
                 const int32_t fq = 1600 + (int32_t)amt * 680, hp = (x >> 2) - wl - ((wb * 8000) >> 15);
                 wb += (fq * hp) >> 15;
@@ -817,7 +850,8 @@ static void app_audio(int32_t *out, uint32_t n)
 #define C_YEL  RGB(255, 220, 0)
 #define C_RED  RGB(255, 50, 50)
 static const uint16_t FX_COL[FX_COUNT] = {RGB(150, 255, 0), RGB(255, 140, 0), RGB(0, 230, 255), RGB(220, 30, 30),
-                                          RGB(255, 60, 60), RGB(255, 220, 0), RGB(255, 40, 160), RGB(190, 120, 255)};
+                                          RGB(255, 60, 60), RGB(255, 220, 0), RGB(255, 40, 160), RGB(190, 120, 255),
+                                          RGB(200, 120, 40)};
 
 static char *put(char *d, const char *s) { while (*s) *d++ = *s++; *d = 0; return d; }
 static char *put_u(char *d, uint32_t u)
