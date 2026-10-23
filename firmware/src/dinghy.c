@@ -1,19 +1,20 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* CYBER//SKRATCH FM-1: the robot DJ from the keypad synth (cyberskratch_3d), rebuilt for the M-VAVE FM-1 on Dinghy.
- * SAM (Software Automatic Mouth) speaks a cybernetic lexicon onto a turntable deck you scratch. A hard hip-hop drum
- * machine, a 16-step sequencer that records what you play, a robot that DJs by itself, an FX rack, and DJ moves on
- * every button. Integer-only rewrite: the chip has no FPU. (The 3D intro, VJ view, Talkie mouth, vocoder, grains and
- * reverb of the original stay on the keypad synth.)
+/* NU//METAL SKRATCHMASTER FM-1: a fork of CYBER//SKRATCH for the M-VAVE FM-1 on Dinghy. The robot DJ joins a nu metal
+ * band: drop-tuned chug guitars and a bass (the PUNK amp: detuned saws, high-pass, fuzz, a two-pole cab) play a riff
+ * locked to each groove, SAM shouts a nu metal lexicon onto the turntable deck, and RAP MODE turns the robot into the
+ * MC: four bars of VERSE (drums + bass, it raps rhyming flows that fit the beat), four bars of HOOK (the guitars come in,
+ * it shouts the hook, the deck scratches the turn back into the verse). Integer-only: the chip has no FPU.
  *
  *   KEYS       DJ mode: 27 words, tap = say it, HOLD = tempo-synced scratch in the STYLE while held
+ *              (in RAP MODE the last word you tap becomes the HOOK)
  *              BEAT mode (HOME): keys 0..11 = the kit (hold = roll), keys 12..26 = the first 15 words
  *
  *   button     tap / hold                              EDIT held + button
  *   PLAY       start / stop                            TAP tempo
  *   REC        record into the 16 steps (quantized)    clear the words, keep the drums
- *   SEQ        hold = FILL (snare roll, toms, slam)    clear the steps
- *   ARP        AUTO: the robot DJs                     MUTATE the steps
- *   GLO        HARD: drums driven, kick ducks the deck BRAKE
+ *   SEQ        hold = FILL (snare roll, chugs, toms)   clear the steps
+ *   ARP        RAP MODE: verse / hook, the robot MCs   MUTATE the steps
+ *   GLO        AUTO: the robot scratches by itself     HARD: drums driven, kick ducks the deck
  *   FX         next FX                                 previous FX
  *   SEL        hold = DROP (only the hats; slam back)
  *   ENV        hold = FREEZE (loop a sliver)           latch FREEZE
@@ -24,14 +25,15 @@
  *   EDIT       hold = SHIFT: the screen shows the second layer
  *
  *   encoder    turn                                    EDIT held + turn
- *   SELECT     JOG: scratch by hand (VELOCITY)          VELOCITY FX: the flick drives the FX
+ *   SELECT     JOG: scratch by hand (VELOCITY)          VELOCITY FX: the flick drives the FX (a WAH pedal)
  *   ALGORITHM  STYLE: BABY CHIRP TRANSFORM TEAR FLARE CRAB   SWING
- *   KNOB1      the FX's amount                         KIT TUNE (-6..+6)
- *   KNOB2      ECHO                                    ECHO TIME (1/16 1/8 3/16 1/4)
+ *   KNOB1      the FX's amount                         TUNING: drop F .. drop F (B = 7-string), kit + band
+ *   KNOB2      GUITAR (guitars + bass level, 0 = off)  ECHO
  *   KNOB3      BPM 60..180                             KIT DECAY
  *   KNOB4      SAM VOICE (renders the bank again)      DRUMS level
- *   PRESETS    GROOVE                                  REACH (how far a held-key scratch goes)
- *   FX: FILTER CRUSH RADIO RING CRUNCH STUTTER REVERSE.  GROOVES: OFF BOOM BAP BREAK ELECTRO HALFTIME RAP METAL TRAP.
+ *   PRESETS    GROOVE (and its riff)                   REACH (how far a held-key scratch goes)
+ *   FX: FILTER CRUSH MEGAPHONE DEMON CRUNCH STUTTER REVERSE WAH.
+ *   GROOVES: OFF BOUNCE B-BOY JUMP BREAKDOWN RAP METAL BOOM BAP STOMP TRAP.
  *
  *   VELOCITY SKRATCH (the keys have no velocity: it is read from how fast you move)
  *     JOG     the faster the flick, the further each click throws the record; let go mid-flick and it spins
@@ -45,7 +47,7 @@
  *              Continue drive PLAY; without one the FM-1 runs on its own BPM. OFF: ignored. It never sends clock.
  *
  * SAM: C core from earlephilhower/ESP8266SAM (GPL v3). Built on Dinghy / Felucca / SLOOP (GPL v3). */
-#define APP_NAME "CYBERSKRATCH"
+#define APP_NAME "NUMETAL"
 #include "platform.c"
 #include "sam/SamData.h"
 #include "sam/sam.h"
@@ -71,7 +73,9 @@ static int32_t soft(int32_t x)                  /* clamp, then a cubic: round at
 }
 
 /* =========================================================================== the word bank (SAM) */
-#define NWORDS 24                               /* pad words */
+#define NWORDS 24                               /* pad words: 0..19 ten rhyme pairs (2k, 2k+1), 20..23 the ad-libs */
+#define NRHYME 20
+#define ADLIB 20
 #define NBANK 27                                /* + the name and its halves */
 #define NAME_WORD 24
 #define WFS 11025u                              /* the bank is kept at 11025 Hz: 8 bit, ~26 s */
@@ -81,21 +85,21 @@ static struct { uint32_t off, len; } bank[NBANK];
 static volatile uint32_t bank_busy = 1;
 
 static const char *const SAY[NBANK] = {         /* spelled for SAM */
-    "AUTOMATON", "FEEDBACK", "ENTROPY", "SIGNAL", "NOISE", "HIGHER STATE",
-    "HOMEOSTASIS", "INFORMATION", "MESSAGE", "LOOP", "OSCILLATE", "ZERO ONE",
-    "MEMORY", "PATTERN", "SYNAPSE", "PARADOX", "ECHO", "NEXUS",
-    "KALEIDOSCOPE", "WONDER", "ALWAYS MERRY AND BRIGHT", "STAND STILL LIKE THE HUMMINGBIRD", "INNER SPACE", "CRYSTALLINE",
-    "SIGHBER SKRATCH", "SIGHBER", "SKRATCH"};
+    "RAGE", "STAGE", "BREAK", "SHAKE", "JUMP", "PUMP",
+    "DROP", "STOP", "FIRE", "WIRE", "LOUD", "CROWD",
+    "HEAVY", "READY", "SCREAM", "MACHINE", "WRECK", "MIKE CHECK",
+    "SOUND", "UNDERGROUND", "BREAK IT DOWN", "LETS GO", "COME ON", "YEAH",
+    "NEW METAL SKRATCH MASTER", "NEW METAL", "SKRATCH MASTER"};
 static const char *const SHOW[NBANK] = {        /* on screen */
-    "AUTOMATON", "FEEDBACK", "ENTROPY", "SIGNAL", "NOISE", "HIGHER STATE",
-    "HOMEOSTASIS", "INFORMATION", "MESSAGE", "LOOP", "OSCILLATE", "ZERO ONE",
-    "MEMORY", "PATTERN", "SYNAPSE", "PARADOX", "ECHO", "NEXUS",
-    "KALEIDOSCOPE", "WONDER", "MERRY + BRIGHT", "HUMMINGBIRD", "INNER SPACE", "CRYSTALLINE",
-    "CYBER SKRATCH", "CYBER", "SKRATCH"};
+    "RAGE", "STAGE", "BREAK", "SHAKE", "JUMP", "PUMP",
+    "DROP", "STOP", "FIRE", "WIRE", "LOUD", "CROWD",
+    "HEAVY", "READY", "SCREAM", "MACHINE", "WRECK", "MIC CHECK",
+    "SOUND", "UNDERGROUND", "BREAK IT DOWN", "LET'S GO", "COME ON", "YEAH",
+    "NU METAL SKRATCHMASTER", "NU METAL", "SKRATCHMASTER"};
 
-#define NVOICES 6
+#define NVOICES 8
 static const struct { const char *name; uint8_t speed, pitch, throat, mouth; } VOICES[NVOICES] = {
-    {"ROBOT", 92, 60, 190, 190}, {"SAM", 72, 64, 128, 128}, {"ELF", 72, 64, 110, 160},
+    {"MC", 62, 58, 150, 175}, {"GROWL", 78, 104, 110, 95}, {"ROBOT", 92, 60, 190, 190}, {"SAM", 72, 64, 128, 128}, {"ELF", 72, 64, 110, 160},
     {"E.T.", 100, 64, 150, 200}, {"STUFFY", 82, 72, 110, 105}, {"OLD LADY", 82, 32, 145, 145}};
 
 SamData *samdata;
@@ -148,17 +152,19 @@ static void render_bank(uint32_t vi)
 }
 
 /* =========================================================================== shared state (main writes, ISR reads) */
-enum { FX_FILTER, FX_CRUSH, FX_RADIO, FX_RING, FX_CRUNCH, FX_STUTTER, FX_REVERSE, FX_COUNT };
-static const char *const FX_NAME[FX_COUNT] = {"FILTER", "CRUSH", "RADIO", "RING", "CRUNCH", "STUTTER", "REVERSE"};
+enum { FX_FILTER, FX_CRUSH, FX_MEGA, FX_DEMON, FX_CRUNCH, FX_STUTTER, FX_REVERSE, FX_WAH, FX_COUNT };
+static const char *const FX_NAME[FX_COUNT] = {"FILTER", "CRUSH", "MEGAPHONE", "DEMON", "CRUNCH", "STUTTER", "REVERSE", "WAH"};
 enum { SC_BABY, SC_CHIRP, SC_TRANS, SC_TEAR, SC_FLARE, SC_CRAB, SC_COUNT };
 static const char *const SC_NAME[SC_COUNT] = {"BABY", "CHIRP", "TRANSFORM", "TEAR", "FLARE", "CRAB"};
-static const char *const ETIME_NAME[4] = {"1/16", "1/8", "3/16", "1/4"};
 
 static volatile uint32_t p_fx, p_amt = 7, p_echo = 4, p_etime = 2, p_style, p_reach = 3, p_play, p_auto, p_hard = 1;
 static volatile uint32_t p_steplen = 7190, p_swing, p_tune = 6, p_decay = 2, p_dlvl = 12, p_vlvl = 12;
 static volatile int32_t p_rate = 16384;                 /* the deck's speed, Q16 word samples per frame (1/4 = 11025 into 44100) */
 static volatile uint32_t p_groove = 1, p_roll, p_restart;
 static volatile uint32_t p_cut, p_freeze, p_drop, p_fill;   /* held performance moves */
+static volatile uint32_t p_glvl = 11, p_rap, p_hook = ADLIB;   /* the band's level, RAP MODE, the hook's word */
+static volatile uint32_t rap_part_v;                       /* ISR -> main: 0 off, 1 + bar in the verse, 5 + bar in the hook */
+static volatile int8_t rap_line[16];                       /* the verse's bar: the word on each step, -1 none */
 static volatile uint32_t p_spin, p_brake;                  /* one-shots: counters, the ISR acts when they move */
 static volatile uint32_t p_ext, p_ext_ticks, p_ext_start;  /* MIDI clock in: following, ticks since Start, Starts */
 static void out_msg(uint32_t st, uint32_t d1, uint32_t d2) { midi_send(st, d1, d2); }   /* main loop only */
@@ -186,7 +192,7 @@ static volatile uint8_t seq_flag[16], seq_skip[16];
 static volatile uint16_t seq_drum[16];
 
 /* =========================================================================== drums */
-enum { W_KICK, W_SNR, W_CLAP, W_HAT, W_CRASH, W_COW, W_ZAP };
+enum { W_KICK, W_SNR, W_CLAP, W_HAT, W_CRASH, W_ZAP };
 typedef struct { const char *name; uint8_t wave, psh, dsh; uint32_t inc0, inc1; int16_t gain, noise, drive; } perc_t;
 #define NDRUM 12
 static const perc_t PERC[NDRUM] = {
@@ -200,26 +206,43 @@ static const perc_t PERC[NDRUM] = {
     {"TOM-L", W_KICK,  10, 11, 17530479u, 10713070u, 25000, 6000, 22},
     {"TOM-H", W_KICK,  10, 11, 29217465u, 18504394u, 23000, 6000, 22},
     {"808",   W_KICK,  10, 13, 10713070u, 4869577u, 30000, 4000,  27},
-    {"COWBL", W_COW,   0, 10, 0, 0,                13000, 0,     21},
+    {"CHINA", W_CRASH, 0, 11, 0, 0,                16000, 0,     0},
     {"ZAP",   W_ZAP,   9, 10, 253218027u, 6817408u, 18000, 0,     0},
     {"CRASH", W_CRASH, 0, 13, 0, 0,                13000, 0,     0},
 };
-enum { D_KICK, D_SNARE, D_CLAP, D_HAT, D_OPEN, D_RIM, D_TOML, D_TOMH, D_808, D_COWBL, D_ZAP, D_CRASH };
+enum { D_KICK, D_SNARE, D_CLAP, D_HAT, D_OPEN, D_RIM, D_TOML, D_TOMH, D_808, D_CHINA, D_ZAP, D_CRASH };
 #define HATS ((1u << D_HAT) | (1u << D_OPEN))
 static const uint32_t HAT_INC[6] = {31991176u, 47433580u, 57593466u, 81450500u, 84146298u, 124661182u};
 static const uint32_t CRASH_INC[6] = {19994485u, 29645987u, 35995916u, 50906562u, 52591436u, 77913239u};
 
-typedef struct { const char *name; const char *lane[4]; uint8_t drum[4]; } groove_t;
-#define NGROOVES 7
+/* the riff: '.' nothing, '0'..'9' a palm-muted chug that many semitones over the tuning's root, 'A'..'K' an open
+ * power chord (A = the root, B = a half step up, G = the tritone, H = the fifth). */
+typedef struct { const char *name; const char *lane[4]; uint8_t drum[4]; const char *riff; } groove_t;
+#define NGROOVES 9
 static const groove_t GROOVES[NGROOVES] = {
-    {"OFF",       {"................", "................", "................", "................"}, {D_KICK, D_SNARE, D_HAT, D_OPEN}},
-    {"BOOM BAP",  {"x.......x.x.....", "....x.......x...", "x.x.x.x.x.x.x.x.", "..............x."}, {D_KICK, D_SNARE, D_HAT, D_OPEN}},
-    {"BREAK",     {"x.x.......xx....", "....x..x.x..x..x", "x.x.x.x.x.x.x.x.", "..............x."}, {D_KICK, D_SNARE, D_HAT, D_OPEN}},
-    {"ELECTRO",   {"x..x..x...x.....", "....x.......x...", "x.xxx.xxx.xxx.xx", "x.........x....."}, {D_KICK, D_CLAP, D_HAT, D_808}},
-    {"HALFTIME",  {"x.........x.....", "........x.......", "x.x.x.x.x.x.x.x.", "..............x."}, {D_KICK, D_SNARE, D_HAT, D_OPEN}},
-    {"RAP METAL", {"x.x...x.x.x...x.", "....x.......x...", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_OPEN, D_CRASH}},
-    {"TRAP",      {"x......x..x.....", "........x.......", "x.x.xxx.x.x.xxxx", "x......x..x....."}, {D_KICK, D_CLAP, D_HAT, D_808}},
+    {"OFF",       {"................", "................", "................", "................"}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
+                  "................"},
+    {"BOUNCE",    {"x..x..x...x..x..", "....x.......x...", "x.x.x.x.x.x.x.x.", "..............x."}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
+                  "0..0..B...0..G.."},
+    {"B-BOY",     {"x.....x.x.......", "....x.......x...", "x.x.x.x.x.x.x.x.", "......x........."}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
+                  "A.....0.0.....1."},
+    {"JUMP",      {"x.xxx.xxx.xxx.xx", "....x.......x...", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_HAT, D_CRASH},
+                  "0.000.000.000.BB"},
+    {"BREAKDOWN", {"x..x......x..x..", "........x.......", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_CHINA, D_CRASH},
+                  "A..0......A..1.."},
+    {"RAP METAL", {"x.x...x.x.x...x.", "....x.......x...", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_OPEN, D_CRASH},
+                  "0.0...0.0.0...H."},
+    {"BOOM BAP",  {"x.......x.x.....", "....x.......x...", "x.x.x.x.x.x.x.x.", "..............x."}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
+                  "................"},
+    {"STOMP",     {"x...x...x...x...", "....x.......x...", "..x...x...x...x.", "....x.......x..."}, {D_KICK, D_SNARE, D_OPEN, D_CLAP},
+                  "0.0.0.0.0.0.D.F."},
+    {"TRAP",      {"x......x..x.....", "........x.......", "x.x.xxx.x.x.xxxx", "x......x..x....."}, {D_KICK, D_CLAP, D_HAT, D_808},
+                  "A......0..0....."},
 };
+#define NFLOWS 7
+static const char *const FLOWS[NFLOWS] = {      /* RAP MODE: where the words start in a bar */
+    "x.x.x.x.x.x.x.x.", "x..x..x.x..x..x.", "..x.x.x...x.x.x.", "x.xxx.x.x.xxx.x.",
+    "x...x.x.x...x.x.", "..xxx.x...xxx.x.", "x.x.x..xx.x.x..."};
 static uint16_t groove_mask[NGROOVES][16];
 
 /* =========================================================================== the audio ISR */
@@ -240,6 +263,55 @@ static const int32_t PITCH[25] = {16384, 17358, 18390, 19484, 20643, 21870, 2317
 static uint32_t mulq15(uint32_t x, uint32_t q) { return (x >> 15) * q + (((x & 0x7FFFu) * q) >> 15); }   /* x * q / 32768, no 64 bit */
 
 #define FRZ_WIN (1400 << 16)                    /* the freeze loop: 127 ms of the word */
+
+static const uint32_t INC_C9[12] = {            /* MIDI 120..131 (C9..B9); lower octaves shift right */
+    815363807u, 863847862u, 915214929u, 969636441u, 1027294024u, 1088380105u,
+    1153098554u, 1221665363u, 1294309365u, 1371273005u, 1452813141u, 1539201906u};
+static uint32_t inc_of(uint32_t note) { if (note > 131u) note = 131u; return INC_C9[note % 12u] >> (10u - note / 12u); }
+#define SAW(ph) ((int32_t)(ph) >> 16)           /* -32768..32767 */
+static struct { uint32_t inc[4], ph[4]; int32_t env, mute; } gt;             /* the guitars: root x2, fifth, octave */
+static struct { uint32_t inc, ph, sph; int32_t env, mute, lp; } bs;          /* the bass: a saw and a sub sine */
+
+static void band_hit(uint32_t rc, uint32_t guitar)   /* a riff step: rc '0'..'9' chug, 'A'.. open; the verse: bass only */
+{
+    const uint32_t open = rc >= 'A', note = 29u + p_tune + (open ? rc - 'A' : rc - '0');   /* tune 6 = B1, drop B */
+    const uint32_t root = inc_of(note);
+    if (guitar) {
+        gt.inc[0] = root;
+        gt.inc[1] = root + (root >> 9);         /* two guitars, a few cents apart */
+        gt.inc[2] = inc_of(note + 7u) - (root >> 10);
+        gt.inc[3] = inc_of(note + 12u);
+        gt.env = 32767 << 8;
+        gt.mute = !open;
+    }
+    bs.inc = root;
+    bs.env = 32767 << 8;
+    bs.mute = !open;
+}
+
+static void rap_flow(uint32_t bar, uint32_t steplen)   /* RAP MODE: a bar of words that fit the gaps, a rhyme at the end */
+{
+    static uint32_t rhyme;
+    const char *f = FLOWS[(noise() >> 8) % NFLOWS];
+    uint32_t st, last = 16u, prev = 99u;
+    for (st = 0; st < 16u; st++) { rap_line[st] = -1; if (f[st] == 'x') last = st; }
+    if (!(bar & 1u)) rhyme = (noise() >> 8) % (NRHYME / 2u) * 2u + (noise() >> 31);
+    for (st = 0; st < 16u; st++) {
+        uint32_t nx = st + 1u, budget, k, best = 0, best_sc = ~0u;
+        if (f[st] != 'x') continue;
+        if (st == last) { rap_line[st] = (int8_t)(bar & 1u ? rhyme ^ 1u : rhyme); continue; }
+        while (nx < 16u && f[nx] != 'x') nx++;
+        budget = (nx - st) * steplen * 5u / 16u;                /* word samples: the gap, and a little over */
+        for (k = 0; k < 6u; k++) {                              /* the best fit of six */
+            const uint32_t w = (noise() >> 8) % (NRHYME + 4u), len = bank[w].len;
+            const uint32_t sc = len > budget ? (len - budget) * 2u : (budget - len) / 2u;
+            if (len && w != prev && w != rhyme && sc < best_sc) { best_sc = sc; best = w; }
+        }
+        rap_line[st] = (int8_t)best;
+        prev = best;
+    }
+}
+
 
 static void deck_start(int32_t w, uint32_t kind, uint32_t once)
 {
@@ -264,6 +336,7 @@ static void drum_hit(uint32_t d)
     dr[d].inc = mulq15(p->inc0, tune);
     dr[d].inc1 = mulq15(p->inc1, tune);
     dr[d].step = tune >> 7;                                     /* the metal's clock, Q8 */
+    if (d == D_CHINA) dr[d].step = dr[d].step * 3u / 2u;        /* the china: the crash's squares, higher and trashier */
     dr[d].ph = 0;
     dr[d].t = 0;
     if (d == D_HAT) dr[D_OPEN].env = 0;         /* the closed hat chokes the open one */
@@ -295,13 +368,13 @@ static void scratch_shape(uint32_t f, int32_t *shape, int32_t *gate)   /* f = 0.
 
 static void app_audio(int32_t *out, uint32_t n)
 {
-    static uint32_t G, gacc, stepn, restarted, cmd_seen, drum_seen, crush_h, ring_ph, ew, rot, half_done;
+    static uint32_t G, gacc, stepn, restarted, cmd_seen, drum_seen, crush_h, ew, rot, half_done;
     static uint32_t spin_seen, brake_seen, braking, brake_g0, muted, slam, was_held, fill_n, frz_was;
     static uint32_t ext_seen, ext_start_seen, ext_wait;
-    static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y, dcz;
-    int32_t dbuf[64], vbuf[64];
+    static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y, dcz, wl, wb, ghp, gl1, gl2;
+    int32_t dbuf[64], vbuf[64], gbuf[64];
     uint32_t off;
-    const uint32_t fx = p_fx, amt = p_amt, play = p_play, hard = p_hard, steplen = p_steplen;
+    const uint32_t fx = p_fx, amt = p_amt, play = p_play, hard = p_hard, steplen = p_steplen, rap = p_rap;
     const uint32_t freeze = p_freeze, drop = p_drop, fill = p_fill, held = drop | fill;
     const int32_t rate_base = p_rate;
     int32_t rate0 = rate_base;
@@ -419,6 +492,7 @@ static void app_audio(int32_t *out, uint32_t n)
                 rate0 = rate0 * (int32_t)braking >> 8;
             }
             if (ext_wait) ginc = 0;
+            if (!rap) { rap_part_v = 0; for (d = 0; d < 16u; d++) rap_line[d] = -1; }
             G += ginc;
             dk.ph += ginc >> 2;                                 /* scratches move in beats */
             while (due < 2u) {
@@ -430,17 +504,37 @@ static void app_audio(int32_t *out, uint32_t n)
                 half_done = 0;
                 if (muted && s == 0u) { muted = 0; slam = 1; }
                 if (play && !muted) {
-                    if (drop) g &= HATS;                            /* DROP: only the hats stay */
-                    if (fill) {                                     /* FILL: a snare roll, toms at the end */
+                    const uint32_t bar = stepn >> 4 & 7u, verse = rap && bar < 4u;
+                    uint32_t rc = (uint32_t)GROOVES[p_groove % NGROOVES].riff[s];
+                    if (rap && s == 0u && (bar == 0u || bar == 4u)) slam = 1;   /* the verse and the hook come in on a crash */
+                    if (drop) { g &= HATS; rc = '.'; }              /* DROP: only the hats stay */
+                    if (fill) {                                     /* FILL: a snare roll, chugs, toms at the end */
                         g = (g & HATS) | 1u << D_SNARE;
                         if (fill_n >= 6u && fill_n & 1u) g |= 1u << (fill_n & 2u ? D_TOMH : D_TOML);
+                        rc = '0';
                         fill_n++;
                     } else fill_n = 0;
-                    if (slam && !held) { g |= 1u << D_CRASH | 1u << D_KICK; slam = 0; }
+                    if (slam && !held) { g |= 1u << D_CRASH | 1u << D_KICK; rc = 'A'; slam = 0; }
                     for (d = 0; d < NDRUM; d++) if (g >> d & 1u) drum_hit(d);
+                    if (rc != '.' && p_groove % NGROOVES) band_hit(rc, !verse);
                     if (seq_word[s] >= 0 && !seq_skip[s] && dk.mode != DK_FRZ && dk.mode != DK_SPIN)
                         deck_start(seq_word[s], seq_flag[s] & SEQ_SCR ? CMD_SCR : CMD_SAY, 1);
-                    if (p_auto && dk.mode != DK_FRZ) {              /* the robot DJ */
+                    if (rap) {                                      /* RAP MODE: the robot MCs */
+                        rap_part_v = 1u + bar;
+                        if (verse) {
+                            if (s == 0u) rap_flow(bar, steplen);
+                            if (rap_line[s] >= 0 && seq_word[s] < 0 && dk.mode != DK_FRZ && dk.mode != DK_SPIN && dk.mode != DK_HAND)
+                                deck_start(rap_line[s], CMD_SAY, 0);
+                        } else {
+                            if (s == 0u) for (d = 0; d < 16u; d++) rap_line[d] = -1;
+                            if (dk.mode != DK_FRZ && dk.mode != DK_SPIN && dk.mode != DK_HAND) {
+                                if (s == 0u || (s == 8u && bar & 1u)) deck_start((int32_t)p_hook, CMD_SAY, 0);
+                                else if (s == 8u) deck_start(ADLIB + 1 + (int32_t)((noise() >> 8) % 3u), CMD_SAY, 0);
+                                else if (s == 12u && (bar == 7u || (p_auto && noise() >> 30 == 0u)))
+                                    deck_start((int32_t)p_hook, CMD_SCR, 1);   /* the scratch back into the verse */
+                            }
+                        }
+                    } else if (p_auto && dk.mode != DK_FRZ) {       /* the robot DJ */
                         uint32_t r = noise() >> 24;
                         if ((s == 0 && r < 180) || (s == 8 && r < 100) || (s == 6 && r < 30))
                             deck_start((int32_t)(noise() >> 8) % NWORDS, CMD_SAY, 0);
@@ -475,10 +569,10 @@ static void app_audio(int32_t *out, uint32_t n)
             int32_t len = (int32_t)bank[dk.word].len << 16;
             switch (dk.mode) {
             case DK_PLAY:
-                dk.rate = fx == FX_REVERSE ? -rate0 : rate0;
+                dk.rate = fx == FX_REVERSE ? -rate0 : fx == FX_DEMON ? (int32_t)(((uint32_t)rate0 * (uint32_t)PITCH[12u - amt * 4u / 5u]) >> 15) : rate0;
                 if (dk.pos >= len || dk.pos < 0) dk.mode = DK_OFF;
                 break;
-            case DK_FRZ: dk.rate = rate0; break;
+            case DK_FRZ: dk.rate = fx == FX_DEMON ? (int32_t)(((uint32_t)rate0 * (uint32_t)PITCH[12u - amt * 4u / 5u]) >> 15) : rate0; break;
             case DK_SCR: {
                 int32_t shape, target;
                 if (dk.ph >= 65536u) { dk.ph &= 65535u; if (dk.once) { dk.mode = DK_LET; break; } }
@@ -592,15 +686,6 @@ static void app_audio(int32_t *out, uint32_t n)
                     s = (s + (nz >> 2)) >> 1;
                     break;
                 }
-                case W_COW: {
-                    uint32_t tt;
-                    ph += step;
-                    tt = (ph >> 8) & 0xFFFFFu;
-                    s = ((int32_t)((52591436u * tt) >> 31) ? 9000 : -9000) + ((int32_t)((77913239u * tt) >> 31) ? 9000 : -9000);
-                    z1 += ((s - z1) * 9000) >> 15;
-                    s = z1 * 2;
-                    break;
-                }
                 default:                                         /* W_ZAP */
                     inc -= (inc - inc1) >> p->psh;
                     ph += inc;
@@ -618,6 +703,34 @@ static void app_audio(int32_t *out, uint32_t n)
         }
         if (dr[D_KICK].env > (30000 << 8) || dr[D_808].env > (30000 << 8)) duck = 32767;
 
+        /* ---- the band: four saws, high-pass, fuzz, a two-pole cab, then the pick's envelope; the bass under it */
+        for (i = 0; i < m; i++) gbuf[i] = 0;
+        if (gt.env > 4096 || bs.env > 4096) {
+            const uint32_t bk = braking ? braking : 256u;       /* BRAKE: the band winds down with the turntable */
+            const uint32_t i0 = (gt.inc[0] >> 8) * bk, i1 = (gt.inc[1] >> 8) * bk, i2 = (gt.inc[2] >> 8) * bk;
+            const uint32_t i3 = (gt.inc[3] >> 8) * bk, ib = (bs.inc >> 8) * bk;
+            const int32_t ta = gt.mute ? 5200 : 9500, gsh = gt.mute ? 11 : 14, bsh = bs.mute ? 11 : 14;
+            for (i = 0; i < m; i++) {
+                int32_t x = 0, b2;
+                if (gt.env > 4096) {
+                    gt.ph[0] += i0; gt.ph[1] += i1; gt.ph[2] += i2; gt.ph[3] += i3;
+                    x = (SAW(gt.ph[0]) + SAW(gt.ph[1]) + SAW(gt.ph[2]) + SAW(gt.ph[3])) >> 2;
+                    ghp += ((x - ghp) * 600) >> 15;             /* ~130 Hz: tight, no mud */
+                    x = soft((x - ghp) * 5);                    /* the fuzz */
+                    gl1 += ((x - gl1) * ta) >> 15;              /* the cab; a palm mute is darker */
+                    gl2 += ((gl1 - gl2) * ta) >> 15;
+                    x = (gl2 * (gt.env >> 8)) >> 15;
+                    gt.env -= gt.env >> gsh;
+                }
+                bs.ph += ib; bs.sph += ib >> 1;
+                bs.lp += ((SAW(bs.ph) - bs.lp) * 2600) >> 15;
+                b2 = bs.lp + (sine(bs.sph) >> 1);               /* + the octave below, for headphones */
+                b2 = (b2 * (bs.env >> 8)) >> 15;
+                bs.env -= bs.env >> bsh;
+                gbuf[i] = x + ((b2 * 3) >> 2);
+            }
+        }
+
         /* ---- FX on the deck, the echo, the mix */
         for (i = 0; i < m; i++) {
             int32_t x = vbuf[i], o, dd;
@@ -632,16 +745,19 @@ static void app_audio(int32_t *out, uint32_t n)
                 x = crush_v;
                 break;
             }
-            case FX_RADIO:
+            case FX_MEGA:
                 r1 += ((x - r1) * 2270) >> 15; x -= r1;
                 r2 += ((x - r2) * 10900) >> 15;
                 x = soft((r2 * (int32_t)(4u + amt)) >> 1) + ((int32_t)noise() >> 22);
                 break;
-            case FX_RING: {
-                static const uint32_t RING[16] = {3895662u, 5338424u, 7315515u, 10024823u, 13737526u, 18825232u, 25797176u,
-                    35351185u, 48443531u, 66384641u, 90970258u, 124661182u, 170829574u, 234096475u, 320794335u, 439600833u};
-                ring_ph += RING[amt & 15u];
-                x = (x * sine(ring_ph)) >> 15;
+            case FX_DEMON:                                       /* the deck slowed (above), and dirtied */
+                x = soft(x + (x >> 1));
+                break;
+            case FX_WAH: {                                       /* a resonant band-pass: the amount is the pedal */
+                const int32_t fq = 1600 + (int32_t)amt * 680, hp = (x >> 2) - wl - ((wb * 8000) >> 15);
+                wb += (fq * hp) >> 15;
+                wl += (fq * wb) >> 15;
+                x = soft(wb);
                 break;
             }
             case FX_CRUNCH: {
@@ -674,7 +790,7 @@ static void app_audio(int32_t *out, uint32_t n)
 
             dd = (dbuf[i] * dl_gain) >> 15;
             if (hard) dd = soft(dd + (dd >> 1));                  /* HARD: the kit into the red */
-            o = x + ((echo_y * 3) >> 2) + dd;
+            o = x + ((echo_y * 3) >> 2) + dd + ((gbuf[i] * (int32_t)(p_glvl * 1300u)) >> 15);
             o = (o * 20000) >> 15;
             out[2u * (off + i)] += o;
             out[2u * (off + i) + 1u] += o;
@@ -692,16 +808,16 @@ static void app_audio(int32_t *out, uint32_t n)
 }
 
 /* =========================================================================== the screen */
-#define C_PINK RGB(255, 40, 160)
-#define C_CYAN RGB(0, 230, 255)
-#define C_GRY  RGB(90, 90, 110)
-#define C_TXT  RGB(220, 220, 230)
-#define C_DEEP RGB(36, 18, 56)
-#define C_MID  RGB(80, 56, 120)
+#define C_PINK RGB(150, 255, 0)                 /* toxic green */
+#define C_CYAN RGB(255, 90, 20)                 /* hot orange */
+#define C_GRY  RGB(100, 105, 95)
+#define C_TXT  RGB(225, 230, 220)
+#define C_DEEP RGB(24, 36, 20)
+#define C_MID  RGB(66, 92, 50)
 #define C_YEL  RGB(255, 220, 0)
 #define C_RED  RGB(255, 50, 50)
-static const uint16_t FX_COL[FX_COUNT] = {RGB(0, 230, 255), RGB(255, 140, 0), RGB(140, 255, 90), RGB(190, 120, 255),
-                                          RGB(255, 60, 60), RGB(255, 220, 0), RGB(255, 40, 160)};
+static const uint16_t FX_COL[FX_COUNT] = {RGB(150, 255, 0), RGB(255, 140, 0), RGB(0, 230, 255), RGB(220, 30, 30),
+                                          RGB(255, 60, 60), RGB(255, 220, 0), RGB(255, 40, 160), RGB(190, 120, 255)};
 
 static char *put(char *d, const char *s) { while (*s) *d++ = *s++; *d = 0; return d; }
 static char *put_u(char *d, uint32_t u)
@@ -727,7 +843,7 @@ static void draw_progress(uint32_t done, uint32_t all)
 static void draw_top(const char *now, uint16_t now_c, uint32_t rec)
 {
     cv_begin(240, 20, C_BLACK);
-    cv_text(4, 2, &FONT_S, "CYBER//SKRATCH", C_PINK);
+    cv_text(4, 2, &FONT_S, "NU//METAL", C_PINK);
     cv_text(236 - text_w(&FONT_S, now), 2, &FONT_S, now, now_c);
     if (rec) cv_rect(124, 6, 8, 8, C_RED);
     cv_rect(0, 19, 240, 1, C_DEEP);
@@ -800,7 +916,7 @@ static void draw_deck(int32_t w, uint32_t pos, uint32_t rot, uint32_t on, uint32
 
 static void draw_pads(const uint32_t *hit_t, uint32_t now)   /* BEAT mode: the kit as 12 pads that flash */
 {
-    static const char *const PAD[NDRUM] = {"KICK", "SNARE", "CLAP", "HAT", "OPEN", "RIM", "LTOM", "HTOM", "808", "COW", "ZAP", "CRASH"};
+    static const char *const PAD[NDRUM] = {"KICK", "SNARE", "CLAP", "HAT", "OPEN", "RIM", "LTOM", "HTOM", "808", "CHINA", "ZAP", "CRASH"};
     uint32_t d;
     cv_begin(240, 64, C_BLACK);
     for (d = 0; d < NDRUM; d++) {
@@ -816,7 +932,7 @@ static void draw_pads(const uint32_t *hit_t, uint32_t now)   /* BEAT mode: the k
 static void draw_cheat(void)                    /* EDIT held: what the buttons do now */
 {
     static const char *const L[8] = {"OCT- BACKSPIN", "OCT+ BRAKE", "PLAY TAP BPM", "ARP  MUTATE",
-                                     "SEQ  CLEAR", "REC  CLR WORDS", "ENV/LFO LATCH", "SAVE SYNC"};
+                                     "SEQ/REC CLEAR", "GLO  HARD", "ENV/LFO LATCH", "SAVE SYNC"};
     uint32_t k;
     cv_begin(240, 64, C_DEEP);
     for (k = 0; k < 8u; k++) cv_text(4 + (int32_t)(k & 1u) * 120, (int32_t)(k >> 1) * 16, &FONT_S, L[k], C_YEL);
@@ -832,6 +948,7 @@ static void draw_steps(uint32_t cur, uint32_t play, uint32_t hits_now)
         uint16_t c = seq_word[s] >= 0 ? (seq_flag[s] & SEQ_SCR ? C_YEL : C_CYAN) : C_DEEP;
         cv_rect(x, 3, 12, 12, c);
         if (seq_drum[s]) cv_rect(x + 4, 7, 4, 4, C_PINK);
+        if (rap_line[s] >= 0) cv_rect(x + 2, 13, 8, 2, C_TXT);   /* RAP MODE: where the MC says a word */
         if (play && s == cur) {
             cv_rect(x, 16, 12, 3, hits_now ? C_PINK : C_TXT);
             cv_rect(x, 0, 12, 2, C_TXT);
@@ -870,7 +987,7 @@ static int32_t chip(int32_t x, const char *s, uint32_t on, uint16_t c)
     cv_text(x + 3, 4, &FONT_S, s, on ? C_BLACK : C_GRY);
     return x + w + 3;
 }
-static void draw_chips(uint32_t play, uint32_t rec, uint32_t aut, uint32_t hard, uint32_t beat, int32_t semi)
+static void draw_chips(uint32_t play, uint32_t rec, uint32_t aut, uint32_t rap, uint32_t beat, int32_t semi)
 {
     char p[6] = "P", *q = p + 1;
     int32_t x = 2;
@@ -878,8 +995,8 @@ static void draw_chips(uint32_t play, uint32_t rec, uint32_t aut, uint32_t hard,
     cv_begin(240, 24, C_BLACK);
     x = chip(x, "PLAY", play, C_PINK);
     x = chip(x, "REC", rec, C_RED);
+    x = chip(x, "RAP", rap, C_YEL);
     x = chip(x, "AUTO", aut, C_CYAN);
-    x = chip(x, "HARD", hard, C_YEL);
     x = chip(x, beat ? "BEAT" : "DJ", 1, C_MID);
     chip(x, p, semi != 0, C_TXT);
     cv_blit(0, 216);
@@ -891,6 +1008,7 @@ static void draw_chips(uint32_t play, uint32_t rec, uint32_t aut, uint32_t hard,
 #else
 #define NOW_US() fm1_micros()
 #endif
+static const char *const DROP_NAME[13] = {"F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F"};
 static int32_t clampi(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 static void deck_cmd(uint32_t kind, uint32_t arg) { cmd_arg = arg; cmd_kind = kind; cmd_n++; }
 static void drums_now(uint32_t mask) { drum_mask = mask; drum_n++; }
@@ -913,6 +1031,7 @@ static void app_main(void)
 {
     struct {                                    /* what survives a power-off */
         uint8_t fx, amt[FX_COUNT], echo, etime, style, reach, voice, groove, hard, beat, aut, swing, tune, decay, dlvl, vlvl, sync;
+        uint8_t rap, glvl, hook, pad2;
         int8_t semi, pad;
         uint16_t bpm;
         int8_t word[16];
@@ -931,7 +1050,8 @@ static void app_main(void)
 
     for (k = 0; k < sizeof set; k++) ((uint8_t *)&set)[k] = 0;
     for (k = 0; k < FX_COUNT; k++) set.amt[k] = 7;
-    set.echo = 4; set.etime = 2; set.reach = 3; set.groove = 1; set.hard = 1; set.bpm = 92;
+    set.echo = 3; set.etime = 2; set.reach = 3; set.groove = 1; set.hard = 1; set.bpm = 100;
+    set.glvl = 11; set.hook = ADLIB;
     set.tune = 6; set.decay = 2; set.dlvl = 12; set.vlvl = 12;
     for (s = 0; s < 16u; s++) set.word[s] = -1;
     settings_load(&set, sizeof set);
@@ -944,12 +1064,16 @@ static void app_main(void)
     if (set.decay > 4u) set.decay = 2;
     if (set.dlvl > 15u) set.dlvl = 12;
     if (set.vlvl > 15u) set.vlvl = 12;
+    if (set.glvl > 15u) set.glvl = 11;
+    if (set.hook >= NBANK) set.hook = ADLIB;
+    set.rap = set.rap ? 1u : 0u;
     set.sync = set.sync ? 1u : 0u;
     set.semi = (int8_t)clampi(set.semi, -12, 12);
     set.bpm = (uint16_t)clampi(set.bpm, 60, 180);
     for (s = 0; s < 16u; s++) {
         if (set.word[s] >= NBANK) set.word[s] = -1;
         seq_word[s] = set.word[s]; seq_flag[s] = set.flag[s]; seq_drum[s] = set.drum[s] & 0x0FFFu;
+        rap_line[s] = -1;
     }
     for (k = 0; k < 27u; k++) held_word[k] = -1;
     for (k = 0; k < NGROOVES; k++)              /* the grooves' lanes into drum masks */
@@ -965,9 +1089,10 @@ static void app_main(void)
     lcg ^= fm1_ms * 2654435761u;
 
     lcd_fill(0, 0, 240, 240, C_BLACK);
-    draw_text_box(0, 60, 240, &FONT_L, "CYBER//", C_PINK, 1);
-    draw_text_box(0, 96, 240, &FONT_L, "SKRATCH", C_CYAN, 1);
-    draw_text_box(0, 180, 240, &FONT_S, "teaching the mouth to speak", C_GRY, 1);
+    draw_text_box(0, 44, 240, &FONT_L, "NU//METAL", C_PINK, 1);
+    draw_text_box(0, 84, 240, &FONT_L, "SKRATCH", C_CYAN, 1);
+    draw_text_box(0, 116, 240, &FONT_L, "MASTER", C_CYAN, 1);
+    draw_text_box(0, 180, 240, &FONT_S, "tuning down to B", C_GRY, 1);
     render_bank(set.voice);
     deck_cmd(CMD_SAY, NAME_WORD);               /* it says its name */
     lcd_fill(0, 0, 240, 240, C_BLACK);
@@ -1017,13 +1142,13 @@ static void app_main(void)
                 knobs = dirty = 1;
             }
             if ((e = fm1_enc_take(ENC_KNOB1)) != 0) {
-                if (shift) { set.tune = (uint8_t)clampi(set.tune + e, 0, 12); put_s(v, (int32_t)set.tune - 6); TOAST("TUNE", v); }
+                if (shift) { set.tune = (uint8_t)clampi(set.tune + e, 0, 12); TOAST("DROP", DROP_NAME[set.tune]); }
                 else { set.amt[set.fx] = (uint8_t)clampi(set.amt[set.fx] + e, 0, 15); put_u(v, set.amt[set.fx]); TOAST(FX_NAME[set.fx], v); }
                 knobs = dirty = 1;
             }
             if ((e = fm1_enc_take(ENC_KNOB2)) != 0) {
-                if (shift) { set.etime = (uint8_t)clampi(set.etime + e, 0, 3); TOAST("ECHO", ETIME_NAME[set.etime]); }
-                else { set.echo = (uint8_t)clampi(set.echo + e, 0, 15); put_u(v, set.echo); TOAST("ECHO", v); }
+                if (shift) { set.echo = (uint8_t)clampi(set.echo + e, 0, 15); put_u(v, set.echo); TOAST("ECHO", v); }
+                else { set.glvl = (uint8_t)clampi(set.glvl + e, 0, 15); put_u(v, set.glvl); TOAST("GUITAR", v); }
                 knobs = dirty = 1;
             }
             if ((e = fm1_enc_take(ENC_KNOB3)) != 0) {
@@ -1066,12 +1191,12 @@ static void app_main(void)
             if (b & (1u << BTN_LFO)) { cut_latch = !cut_latch; TOAST("CUT", cut_latch ? "LATCH" : "OFF"); }
             if (b & (1u << BTN_HOME)) { set.semi = 0; chips = dirty = 1; TOAST("PITCH", "0"); }
             if (b & (1u << BTN_FX)) { set.fx = (uint8_t)((set.fx + FX_COUNT - 1u) % FX_COUNT); knobs = dirty = 1; TOAST("", FX_NAME[set.fx]); }
-            if (b & (1u << BTN_GLO)) { p_brake++; TOAST("", "BRAKE"); }
+            if (b & (1u << BTN_GLO)) { set.hard = !set.hard; dirty = 1; t_change = now; TOAST("HARD", set.hard ? "ON" : "OFF"); }
         } else {
             if (b & (1u << BTN_PLAY)) { play = !play; if (play) p_restart++; chips = 1; }
             if (b & (1u << BTN_REC)) { rec = !rec; chips = 1; }
-            if (b & (1u << BTN_ARP)) { set.aut = !set.aut; chips = dirty = 1; TOAST("AUTO", set.aut ? "ON" : "OFF"); }
-            if (b & (1u << BTN_GLO)) { set.hard = !set.hard; chips = dirty = 1; TOAST("HARD", set.hard ? "ON" : "OFF"); }
+            if (b & (1u << BTN_ARP)) { set.rap = !set.rap; chips = dirty = 1; TOAST("RAP", set.rap ? "MODE" : "OFF"); }
+            if (b & (1u << BTN_GLO)) { set.aut = !set.aut; chips = dirty = 1; TOAST("AUTO", set.aut ? "ON" : "OFF"); }
             if (b & (1u << BTN_FX)) { set.fx = (uint8_t)((set.fx + 1u) % FX_COUNT); knobs = dirty = 1; TOAST("", FX_NAME[set.fx]); }
             if (b & (1u << BTN_HOME)) { set.beat = !set.beat; chips = dirty = 1; deck_view = ~0u; }
             if (b & (1u << BTN_OCT_DOWN) && set.semi > -12) { set.semi--; chips = dirty = 1; }
@@ -1104,6 +1229,7 @@ static void app_main(void)
         p_fx = set.fx; p_amt = (uint32_t)clampi((int32_t)set.amt[set.fx] + (fx_boost >> 8), 0, 15); p_echo = set.echo; p_etime = set.etime; p_style = set.style; p_reach = set.reach;
         p_groove = set.groove; p_hard = set.hard; p_auto = set.aut; p_play = play; p_swing = set.swing;
         p_tune = set.tune; p_decay = set.decay; p_dlvl = set.dlvl; p_vlvl = set.vlvl;
+        p_glvl = set.glvl; p_rap = set.rap; p_hook = set.hook; p_etime = 2;
         p_cut = (btn >> BTN_LFO & 1u && !shift) || cut_latch;
         p_freeze = (btn >> BTN_ENV & 1u && !shift) || frz_latch;
         p_drop = btn >> BTN_SEL & 1u;
@@ -1150,6 +1276,7 @@ static void app_main(void)
                         } else {
                             tap_n = 0;
                             deck_cmd(CMD_SAY, (uint32_t)w);
+                            if (set.rap && set.hook != (uint8_t)w) { set.hook = (uint8_t)w; dirty = 1; t_change = now; }   /* the hook */
                         }
                         last_tap_w = w;
                         t_tap = now;
@@ -1221,8 +1348,8 @@ static void app_main(void)
         }
         fm1_led_key(BTN_PLAY, play && (seq_step_v & 3u) < 2u);
         fm1_led_key(BTN_REC, rec);
-        fm1_led_key(BTN_ARP, set.aut);
-        fm1_led_key(BTN_GLO, set.hard);
+        fm1_led_key(BTN_ARP, set.rap);
+        fm1_led_key(BTN_GLO, set.aut);
         fm1_led_key(BTN_FX, set.fx != FX_FILTER || set.amt[FX_FILTER] != 7u);
         fm1_led_key(BTN_HOME, set.beat);
         fm1_led_key(BTN_EDIT, shift);
@@ -1253,12 +1380,16 @@ static void app_main(void)
             else if (p_cut) now_s = "CUT";
             else if (fs & ST_MUTED) now_s = "...";
             else if (fs & ST_WAIT) now_s = "SYNC...";
-            else {
+            else if (set.rap && play && rap_part_v) {
+                char *p = put(bpm_s, rap_part_v <= 4u ? "VERSE " : "HOOK ");
+                put_u(p, (rap_part_v - 1u) % 4u + 1u);
+                now_s = bpm_s; now_c = rap_part_v <= 4u ? C_CYAN : C_PINK;
+            } else {
                 char *p = put(bpm_s, ext_live ? "EXT " : set.beat ? "BEAT " : "DJ ");
                 put_u(p, ext_live ? ext_bpm : set.bpm);
                 now_s = bpm_s; now_c = ext_live ? C_YEL : C_CYAN;
             }
-            key = (uint32_t)now_s[0] * 7u + (uint32_t)now_s[1] + rec * 1000u + (ext_live ? ext_bpm : set.bpm) * 3u + set.beat * 99991u + ext_live * 7777u;
+            key = (uint32_t)now_s[0] * 7u + (uint32_t)now_s[1] + rap_part_v * 13331u + rec * 1000u + (ext_live ? ext_bpm : set.bpm) * 3u + set.beat * 99991u + ext_live * 7777u;
             if (key != top_key) { top_key = key; draw_top(now_s, now_c, rec); }
 
             /* the big line: a toast for a moment, else the word */
@@ -1289,15 +1420,15 @@ static void app_main(void)
                 knobs = 0;
                 if (!shift) {
                     a[0].label = FX_NAME[set.fx]; put_u(a[0].val, p_amt); a[0].bar = p_amt; a[0].of = 15;
-                    a[1].label = "ECHO"; put_u(a[1].val, set.echo); a[1].bar = set.echo; a[1].of = 15;
+                    a[1].label = "GUITAR"; put_u(a[1].val, set.glvl); a[1].bar = set.glvl; a[1].of = 15;
                     a[2].label = "BPM"; put_u(a[2].val, set.bpm); a[2].bar = set.bpm - 60u; a[2].of = 120;
                     a[3].label = "VOICE"; put(a[3].val, VOICES[set.voice].name); a[3].bar = 0; a[3].of = 0;
                     c[0].label = "JOG"; put(c[0].val, "VELOCITY"); c[0].of = 0;
                     c[1].label = "STYLE"; put(c[1].val, SC_NAME[set.style]); c[1].of = 0;
                     c[2].label = "GROOVE"; put(c[2].val, GROOVES[set.groove].name); c[2].of = 0;
                 } else {
-                    a[0].label = "TUNE"; put_s(a[0].val, (int32_t)set.tune - 6); a[0].bar = set.tune; a[0].of = 12;
-                    a[1].label = "E.TIME"; put(a[1].val, ETIME_NAME[set.etime]); a[1].bar = set.etime; a[1].of = 3;
+                    a[0].label = "DROP"; put(a[0].val, DROP_NAME[set.tune]); a[0].bar = set.tune; a[0].of = 12;
+                    a[1].label = "ECHO"; put_u(a[1].val, set.echo); a[1].bar = set.echo; a[1].of = 15;
                     a[2].label = "DECAY"; put_s(a[2].val, (int32_t)set.decay - 2); a[2].bar = set.decay; a[2].of = 4;
                     a[3].label = "DRUMS"; put_u(a[3].val, set.dlvl); a[3].bar = set.dlvl; a[3].of = 15;
                     c[0].label = "VEL FX"; put(c[0].val, "FLICK"); c[0].of = 0;
@@ -1306,7 +1437,7 @@ static void app_main(void)
                 }
                 draw_knobs(a, c, shift, acc);
             }
-            if (chips) { chips = 0; draw_chips(play, rec, set.aut, set.hard, set.beat, set.semi); }
+            if (chips) { chips = 0; draw_chips(play, rec, set.aut, set.rap, set.beat, set.semi); }
         }
 
         if (dirty && !play && !dk_on_v && now - t_change > 2000u) {   /* saved when silent (an erase stalls the sound) */

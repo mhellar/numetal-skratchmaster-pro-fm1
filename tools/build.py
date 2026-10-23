@@ -47,7 +47,7 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = "FM-1_991"                # CyberSkratch (Dinghy is 990; OUR_LOADER in the installer wants FM-1_9NN)
+PRODUCT = "FM-1_992"                # NU//METAL SKRATCHMASTER (Dinghy is 990, CyberSkratch 991; OUR_LOADER in the installer wants FM-1_9NN)
 SAM_SRC = ("sam", "render", "reciter", "sam_libc")
 VERSION = None                      # APP_VER for release builds
 
