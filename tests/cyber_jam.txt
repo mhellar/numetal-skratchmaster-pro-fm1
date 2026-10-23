@@ -1,0 +1,16 @@
+2000 btn 12
+2000 keys 0x1
+2300 keys 0
+2700 keys 0x10
+3000 keys 0
+3300 keys 0x2
+4800 keys 0
+5300 btn 10
+5300 keys 0x100
+5500 keys 0
+7500 btn 7
+9000 btn 6
+9000 keys 0x1000000
+9300 keys 0
+10500 btn 12
+11000 end

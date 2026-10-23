@@ -47,7 +47,8 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = "FM-1_990"                # Dinghy: 99N (OUR_LOADER in the installer wants FM-1_9NN). Your fork: pick your own
+PRODUCT = "FM-1_991"                # CyberSkratch (Dinghy is 990; OUR_LOADER in the installer wants FM-1_9NN)
+SAM_SRC = ("sam", "render", "reciter", "sam_libc")
 VERSION = None                      # APP_VER for release builds
 
 
@@ -156,10 +157,14 @@ def build_app():
             ("cc", "-c", FW / "hal" / "fm1_vec.S", "-o", OUT / "fm1_vec.o"),
             ("cc", "-c", FW / "hal" / "fm1_isr.S", "-o", OUT / "fm1_isr.o"),
             ("cc", *flags, "-c", FW / "src" / "dinghy.c", "-o", OUT / "dinghy.o")]
+    sam = FW / "src" / "sam"                     # SAM (Software Automatic Mouth), its own objects: its globals stay out of dinghy.c
+    sam_flags = [*CFLAGS, "-w", f"-I{sam}", f"-I{sam / 'shim'}", f"-I{sam / 'shim_fm1'}"]
+    sam_objs = [OUT / f"sam_{n}.o" for n in SAM_SRC]
+    cmds += [("cc", *sam_flags, "-c", sam / f"{n}.c", "-o", o) for n, o in zip(SAM_SRC, sam_objs)]
     tc_all(*cmds)
     elf = OUT / "dinghy.elf"
     tc("pi32v2/bin/ld", "--gc-sections", "-e", "_start", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o",
-       OUT / "fm1_isr.o", OUT / "dinghy.o", "-o", elf)
+       OUT / "fm1_isr.o", OUT / "dinghy.o", *sam_objs, "-o", elf)
     for sect in ("text.bin", "data.bin", "ramtext.bin"):
         (OUT / sect).unlink(missing_ok=True)
     *_, syms, dis, rt = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, OUT / "text.bin"),
