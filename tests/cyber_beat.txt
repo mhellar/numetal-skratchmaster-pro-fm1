@@ -1,0 +1,6 @@
+500 btn 12
+800 btn 8
+900 keys 0x1
+1000 keys 0x9
+1100 keys 0
+3000 end
