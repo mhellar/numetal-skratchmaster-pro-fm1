@@ -20,7 +20,7 @@
  *   LFO        hold = CUT (crossfader on 32nds)        latch CUT
  *   HOME       DJ / BEAT                               pitch back to 0
  *   OCT- OCT+  the deck's pitch, a semitone            BACKSPIN / BRAKE (the turntable's power cut)
- *   SAVE       save everything now                     SYNC: AUTO / SEND / OFF
+ *   SAVE       save everything now                     SYNC: FOLLOW / OFF
  *   EDIT       hold = SHIFT: the screen shows the second layer
  *
  *   encoder    turn                                    EDIT held + turn
@@ -41,8 +41,8 @@
  *     EDIT +  the same moves pump the current FX instead (clockwise / taps up, anticlockwise down); it falls
  *             back when you stop
  *   USB-MIDI   channel 10 notes 36..47 = the kit; other channels notes 48..74 = the 27 words
- *   MIDI SYNC  AUTO: an incoming clock (24 ppqn) leads, Start / Stop / Continue drive PLAY; without one the FM-1
- *              sends its clock and Start / Stop. SEND: always leads. OFF: no clock either way.
+ *   MIDI SYNC  FOLLOW: an incoming clock (24 ppqn, USB or the TRS input) sets the tempo and the grid, Start / Stop /
+ *              Continue drive PLAY; without one the FM-1 runs on its own BPM. OFF: ignored. It never sends clock.
  *
  * SAM: C core from earlephilhower/ESP8266SAM (GPL v3). Built on Dinghy / Felucca / SLOOP (GPL v3). */
 #define APP_NAME "CYBERSKRATCH"
@@ -161,9 +161,7 @@ static volatile uint32_t p_groove = 1, p_roll, p_restart;
 static volatile uint32_t p_cut, p_freeze, p_drop, p_fill;   /* held performance moves */
 static volatile uint32_t p_spin, p_brake;                  /* one-shots: counters, the ISR acts when they move */
 static volatile uint32_t p_ext, p_ext_ticks, p_ext_start;  /* MIDI clock in: following, ticks since Start, Starts */
-static volatile uint32_t p_send_clock;                     /* MIDI clock out: leading */
-static volatile uint32_t app_mo_buf[32], app_mo_w, app_mo_r;   /* the main loop's MIDI out; the ISR sends it (one producer) */
-static void out_msg(uint32_t st, uint32_t d1, uint32_t d2) { if (app_mo_w - app_mo_r < 32u) { app_mo_buf[app_mo_w % 32u] = st | d1 << 8 | d2 << 16; app_mo_w++; } }
+static void out_msg(uint32_t st, uint32_t d1, uint32_t d2) { midi_send(st, d1, d2); }   /* main loop only */
 enum { CMD_SAY, CMD_SCR, CMD_LET, CMD_STROKE };
 static volatile uint32_t cmd_n, cmd_kind, cmd_arg;      /* main: arg, kind, then n++ */
 static volatile int32_t cmd_span;                       /* CMD_STROKE: how far, word samples (+ forward, - back) */
@@ -299,7 +297,7 @@ static void app_audio(int32_t *out, uint32_t n)
 {
     static uint32_t G, gacc, stepn, restarted, cmd_seen, drum_seen, crush_h, ring_ph, ew, rot, half_done;
     static uint32_t spin_seen, brake_seen, braking, brake_g0, muted, slam, was_held, fill_n, frz_was;
-    static uint32_t ext_seen, ext_start_seen, ext_wait, tick_acc, play_was;
+    static uint32_t ext_seen, ext_start_seen, ext_wait;
     static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y, dcz;
     int32_t dbuf[64], vbuf[64];
     uint32_t off;
@@ -310,7 +308,7 @@ static void app_audio(int32_t *out, uint32_t n)
     const int32_t dl_gain = (int32_t)p_dlvl * 2731, vl_gain = (int32_t)p_vlvl * 2731;   /* 12 = unity */
 
     /* the clock: G = where the song is, in 16ths (Q16). Steps fire as G passes them (odd ones later with swing). */
-    if (p_restart != restarted) { restarted = p_restart; G = 0; gacc = 0; stepn = 0; braking = 0; muted = 0; tick_acc = 65536u; }
+    if (p_restart != restarted) { restarted = p_restart; G = 0; gacc = 0; stepn = 0; braking = 0; muted = 0; }
     if (p_ext_start != ext_start_seen) {        /* MIDI Start: back to the top, wait for the first tick */
         ext_start_seen = p_ext_start; G = 0; gacc = 0; stepn = 0; braking = 0; muted = 0; ext_wait = 1; ext_seen = 0;
     }
@@ -324,13 +322,7 @@ static void app_audio(int32_t *out, uint32_t n)
         else G += (uint32_t)(err / 8);          /* gently: the main loop's timing is a little loose */
     }
     if (!p_ext) ext_wait = 0;
-    while (app_mo_r != app_mo_w) {              /* MIDI out: the notes from the main loop */
-        const uint32_t q = app_mo_buf[app_mo_r % 32u];
-        midi_send(q & 0xFFu, q >> 8 & 0x7Fu, q >> 16 & 0x7Fu);
-        app_mo_r++;
-    }
-    if (p_send_clock && play != play_was) midi_send(play ? 0xFAu : 0xFCu, 0, 0);   /* leading: Start / Stop */
-    play_was = play;
+
     if (cmd_n != cmd_seen) {
         cmd_seen = cmd_n;
         if (cmd_kind == CMD_LET) { if (dk.mode == DK_SCR) dk.mode = DK_LET; }
@@ -429,10 +421,6 @@ static void app_audio(int32_t *out, uint32_t n)
             if (ext_wait) ginc = 0;
             G += ginc;
             dk.ph += ginc >> 2;                                 /* scratches move in beats */
-            if (p_send_clock) {                                 /* leading: 24 ticks a beat = 6 a step */
-                tick_acc += ginc * 6u;
-                while (tick_acc >= 65536u) { tick_acc -= 65536u; midi_send(0xF8u, 0, 0); }
-            }
             while (due < 2u) {
                 const uint32_t s = stepn & 15u, at = (stepn << 16) + (s & 1u ? p_swing * 65536u / 40u : 0u);
                 uint32_t g;
@@ -956,7 +944,7 @@ static void app_main(void)
     if (set.decay > 4u) set.decay = 2;
     if (set.dlvl > 15u) set.dlvl = 12;
     if (set.vlvl > 15u) set.vlvl = 12;
-    set.sync %= 3u;
+    set.sync = set.sync ? 1u : 0u;
     set.semi = (int8_t)clampi(set.semi, -12, 12);
     set.bpm = (uint16_t)clampi(set.bpm, 60, 180);
     for (s = 0; s < 16u; s++) {
@@ -1089,9 +1077,9 @@ static void app_main(void)
             if (b & (1u << BTN_OCT_DOWN) && set.semi > -12) { set.semi--; chips = dirty = 1; }
             if (b & (1u << BTN_OCT_UP) && set.semi < 12) { set.semi++; chips = dirty = 1; }
         }
-        if (shift && b & (1u << BTN_SAVE)) {           /* SYNC: AUTO (follow MIDI clock, else send it) / SEND / OFF */
-            static const char *const SY[3] = {"AUTO", "SEND", "OFF"};
-            set.sync = (uint8_t)((set.sync + 1u) % 3u);
+        if (shift && b & (1u << BTN_SAVE)) {           /* SYNC: FOLLOW an incoming MIDI clock / OFF */
+            static const char *const SY[2] = {"FOLLOW", "OFF"};
+            set.sync = (uint8_t)(!set.sync);
             TOAST("SYNC", SY[set.sync]);
             dirty = 1;
             b &= ~(1u << BTN_SAVE);
@@ -1123,7 +1111,6 @@ static void app_main(void)
         if (ext_n && now - t_tick > 400u) ext_n = 0;    /* the clock stopped coming */
         ext_live = set.sync == 0u && ext_n >= 3u && ext_len;
         p_ext = ext_live;
-        p_send_clock = set.sync != 2u && !ext_live;
         p_steplen = ext_live ? ext_len : 661500u / set.bpm;
         p_rate = (int32_t)((16384u * (uint32_t)PITCH[set.semi + 12]) >> 15);
 
@@ -1189,7 +1176,7 @@ static void app_main(void)
         }
         while (midi_get(&st, &d1, &d2)) {       /* USB-MIDI in */
             if (st >= 0xF8u) {                  /* clock and transport */
-                if (set.sync != 0u) continue;   /* only AUTO follows */
+                if (set.sync != 0u) continue;   /* OFF: ignored */
                 if (st == 0xF8u) {
                     ext_us[ext_n % 49u] = NOW_US();
                     ext_n++;
