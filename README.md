@@ -9,6 +9,8 @@ them with the keys and the jog wheel. Behind you a drop-tuned band plays: chuggi
 locked to ten grooves. In **RAP MODE** the robot is the MC: four bars of verse, where it raps rhyming lines that fit
 the beat, then four bars of hook, where the guitars come in and it shouts the hook in a Melvins-style **GROWL**.
 
+<p align="center"><img src="docs/scratch.gif" width="480" alt="Scratching BREAK IT DOWN on the FM-1"></p>
+
 <p align="center"><img src="docs/screen.png" width="240" alt="The screen: the word on the deck, the platter, its waveform, the 16 steps, the knobs, RAP MODE on"></p>
 
 > **Status: 1.0, runs on the FM-1.** Built and played on the device. Identity `FM-1_926`.
