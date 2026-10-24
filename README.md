@@ -1,55 +1,70 @@
-<p align="center"><img src="assets/logo.svg" width="96" alt="Dinghy"></p>
+<p align="center"><img src="assets/logo.svg" width="96" alt="NU//METAL SKRATCHMASTER"></p>
 
-# Dinghy
+# NU//METAL SKRATCHMASTER
 
-**The smallest firmware for the M-VAVE FM-1 to build your own on.**
+**A robot turntablist with a nu metal band, for the M-VAVE FM-1.**
 
-Dinghy plays a sine wave on the keys, and that is all it does. Under it is everything an FM-1 firmware needs
-before it can be any fun: the update path, the USB rescue, USB-MIDI, USB audio, the keys, knobs and LEDs, the
-screen and a place to keep settings. It all works, so you start with the part you actually want to write.
+The FM-1 becomes a deck. SAM (the 1982 Software Automatic Mouth) says 27 words onto a virtual record, and you scratch
+them with the keys and the jog wheel. Behind you a drop-tuned band plays: chugging guitars, a bass and a 12-piece kit
+locked to ten grooves. In **RAP MODE** the robot is the MC: four bars of verse, where it raps rhyming lines that fit
+the beat, then four bars of hook, where the guitars come in and it shouts the hook in a Melvins-style **GROWL**.
 
-```
-firmware/src/dinghy.c     <- your firmware: ~200 lines, a 4-voice sine. Start here.
-firmware/src/platform.c   <- the plumbing (boot, USB, updates, audio ISR, settings). Done; read it, don't fight it.
-firmware/src/*.c, hal/    <- Felucca's platform, as SLOOP carries it, unchanged
-```
+<p align="center"><img src="docs/screen.png" width="240" alt="The screen: the word on the deck, the platter, its waveform, the 16 steps, the knobs, RAP MODE on"></p>
 
-Dinghy is based on [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita (Hügelton Instruments), with its
-platform as [SLOOP](https://github.com/isod89/sloop-fm1) (isod89) carries it: it keeps that platform and throws away the
-rest. The smallest boat of the family, after the felucca and the sloop.
+> **Status: 1.0, runs on the FM-1.** Built and played on the device. Identity `FM-1_926`.
+> Installing firmware is at your own risk; the official firmware goes back on through the
+> [FM-1 Firmware Hub](https://fm1.designburgapps.com) at any time.
 
-<p align="center"><img src="docs/screen.png" width="240" alt="Dinghy's screen: the name, the note played, a keyboard with the keys that sound"></p>
+## Install
 
-> **Status: 0.3, runs on the FM-1.** Tested on the device: the install, MIDI in (pitch exact, 4 voices), USB audio
-> at 44.1 / 48 kHz, the keys, the screen, the octave kept in flash, and back to another firmware through the hub.
+- **The easy way:** the [FM-1 Firmware Hub](https://fm1.designburgapps.com) in Chrome or Edge.
+- **By hand:** download `numetal-X.Y.fwsc` from [Releases](../../releases), then
+  `python3 tools/fm1_install.py numetal-X.Y.fwsc` (needs `pip3 install mido python-rtmidi`).
+- **Rescue:** hold **OCT-** while switching on. No sound, only the updater. Install anything from there.
 
-## What you get
+## Play
 
-| | |
-| --- | --- |
-| **Updates that always work** | `tools/fm1_install.py`, the web installers and the [FM-1 Firmware Hub](https://fm1.designburgapps.com) reach your firmware over USB, so you (and your users) can always install the next build, or go back to the official firmware. |
-| **USB rescue** | Hold **OCT-** while switching on: no sound, only the updater. If your firmware crashes twice at boot, the FM-1 goes there by itself. |
-| **USB-MIDI** | In and out, class compliant: `midi_get()`, `midi_send()`. |
-| **USB audio** | The FM-1 shows up as a 16-bit stereo audio input (44.1 or 48 kHz): record it into any DAW or phone. Nothing to do. |
-| **Panel** | 27 keys, 14 buttons, 7 encoders, the MASTER knob, the LEDs, by name (`BTN_PLAY`, `ENC_KNOB1`, ...). |
-| **Screen** | 240 x 240, text in two sizes, rectangles, lines, pixels. |
-| **Settings** | `settings_load()` / `settings_save()`: up to 256 bytes with a CRC in their own flash sector. |
-| **A crash screen** | A fault shows where it happened (the PC), then the FM-1 restarts. |
-| **Host mode** | The same `dinghy.c` on your computer: the screen as an image, the sound as a WAV. No FM-1 needed to try an idea. |
-| **Checks** | The build fails on what bricks or breaks an FM-1 firmware: a 64-bit division, a call into the chip ROM, too much RAM, a register touched outside `hal/`. |
+Press **PLAY**, then press **ARP** for RAP MODE. Tap a key: the robot says the word. Hold it: the word is scratched
+in time, in the STYLE. Turn **SELECT** to scratch by hand; flick it and let go, and the record spins on.
 
-## Build your own
+| Key / button | Tap / hold | With **EDIT** held |
+| --- | --- | --- |
+| **Keys** | DJ mode: 27 words, tap = say it, hold = tempo-synced scratch (in RAP MODE the last word you tap becomes the hook). BEAT mode: keys 1-12 = the kit (hold = roll), 13-27 = the first 15 words | |
+| **PLAY** | start / stop | TAP tempo |
+| **REC** | record into the 16 steps (quantized) | clear the words, keep the drums |
+| **SEQ** | hold = FILL (snare roll, chugs, toms) | clear the steps |
+| **ARP** | RAP MODE: verse / hook, the robot MCs | MUTATE the steps |
+| **GLO** | AUTO: the robot scratches by itself | HARD: drums driven, the kick ducks the deck |
+| **FX** | next FX | previous FX |
+| **SEL** | hold = DROP (only the hats, then slam back in) | |
+| **ENV** | hold = FREEZE (loop a sliver) | latch FREEZE |
+| **LFO** | hold = CUT (crossfader on 32nds) | latch CUT |
+| **HOME** | DJ / BEAT | pitch back to 0 |
+| **OCT- / OCT+** | the deck's pitch, a semitone | BACKSPIN / BRAKE |
+| **SAVE** | save everything now | SYNC: FOLLOW / OFF |
 
-From nothing to your own firmware on the FM-1, step by step. Each step works before you go to the next.
+| Encoder | Turn | With **EDIT** held |
+| --- | --- | --- |
+| **SELECT** | JOG: scratch by hand (velocity) | VELOCITY FX: the flick pumps the FX |
+| **ALGORITHM** | STYLE: BABY CHIRP TRANSFORM TEAR FLARE CRAB | SWING |
+| **KNOB1** | the FX's amount | TUNING: drop F .. drop F (B = 7-string) |
+| **KNOB2** | GUITAR level (0 = off) | ECHO |
+| **KNOB3** | BPM 60..180 | KIT DECAY |
+| **KNOB4** | SAM VOICE: MC GROWL ROBOT SAM ELF E.T. STUFFY OLD LADY | DRUMS level |
+| **PRESETS** | GROOVE: OFF BOUNCE B-BOY JUMP BREAKDOWN RAP METAL BOOM BAP STOMP TRAP SLUDGE | REACH (how far a held-key scratch goes) |
 
-### 1. Copy it
+**FX:** FILTER, CRUSH, MEGAPHONE, DEMON, CRUNCH, STUTTER, REVERSE, WAH, GROWL.
 
-On GitHub: **Use this template** (top right on this page) or fork it, then clone your copy. Rename nothing yet:
-first make sure the unchanged Dinghy builds on your machine.
+**Velocity skratch:** the keys have no velocity, so it is read from how fast you move. Flick the jog faster and each
+click throws the record further. Tap the same word again quickly for finger strokes, back and forth. With EDIT held
+the same moves pump the current FX instead, like a wah pedal.
 
-### 2. Set up once
+**MIDI:** USB-MIDI channel 10, notes 36-47 = the kit; other channels, notes 48-74 = the 27 words. **SYNC FOLLOW**
+follows an incoming clock (USB or the TRS input), and Start / Stop / Continue drive PLAY.
 
-You need Linux on x86-64 (or macOS / Windows with Docker or WSL), Python 3 with Pillow, the JieLi toolchain
+## Build it
+
+You need Linux on x86-64 (or macOS with Docker, or Windows with WSL), Python 3 with Pillow, the JieLi toolchain
 and three files of the JieLi AC79 SDK:
 
 ```sh
@@ -57,72 +72,24 @@ pip3 install Pillow mido python-rtmidi
 tools/get_toolchain.sh                      # JieLi's clang for the chip, to ~/.jieli/toolchain
 git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
     https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK
+
+tests/run_host.sh                           # on your computer: build/host/dinghy.wav + screen PNGs
+./build.sh                                  # -> build/dinghy.fwsc
+./build.sh --release 1.1                    # -> build/numetal-1.1.fwsc, "1.1" on the screen
+python3 tools/fm1_install.py build/dinghy.fwsc
 ```
 
-On macOS the build runs the toolchain in a `linux/amd64` Docker container by itself (have Docker running).
-`JIELI_TOOLCHAIN` and `AC79_SDK` point elsewhere if your copies live somewhere else.
-
-### 3. Hear it without an FM-1
-
-```sh
-tests/run_host.sh                           # -> build/host/dinghy.wav and screen PNGs
-```
-
-Host mode runs the same `dinghy.c` on your computer: the sound as a WAV, the screen as images. Most ideas can be
-tried here first, in seconds.
-
-### 4. Your first change
-
-Open [firmware/src/dinghy.c](firmware/src/dinghy.c) (~200 lines). The sound is `app_audio()`: it gets an empty
-buffer of stereo frames and adds to it. Make the sine a square:
-
-```c
-s = ((int32_t)ph < 0 ? 8000 : -8000) * amp >> 15;     /* instead of s = (sine(ph) * amp) >> 15; */
-```
-
-Run `tests/run_host.sh` again and listen to `build/host/dinghy.wav`. The screen is drawn in `app_main()`, the keys
-are read there too: change the text, add a knob ([docs/API.md](docs/API.md) has every call).
-
-### 5. Onto the FM-1
-
-```sh
-./build.sh                                       # -> build/dinghy.fwsc (fails on what would brick the FM-1)
-python3 tools/fm1_install.py build/dinghy.fwsc   # over USB; asks before it writes, restarts into your build
-python3 tools/fm1_install.py --info              # what runs on the connected FM-1
-```
-
-That is the whole loop: change, hear it on the host, build, install. Back to another firmware, or to the official
-one, with the [FM-1 Firmware Hub](https://fm1.designburgapps.com) in Chrome or Edge: Dinghy (and every copy of it)
-answers the hub's updater like every firmware there. Installing firmware is at your own risk.
-
-### 6. When it goes wrong
-
-- **It crashes:** the screen shows where (the PC), then the FM-1 restarts. Twice at boot and it goes to the
-  USB rescue by itself.
-- **It won't start at all:** hold **OCT-** while switching on: the USB rescue, no sound, only the updater. Install
-  a working build (or another firmware from the hub) from there.
-- **The build refuses:** it checks for a 64-bit division, a call into the chip ROM, too much RAM, a register touched
-  outside `hal/`. [docs/RULES.md](docs/RULES.md) says why each one matters; read it before your first crash.
-
-### 7. Make it yours, release it, get into the hub
-
-Your name and logo, your own package identity (so the FM-1 and the installers tell your firmware from Dinghy),
-a GitHub release with the `.fwsc`, and how to get listed next to the others in the
-[FM-1 Firmware Hub](https://fm1.designburgapps.com): **[docs/MAKE-IT-YOURS.md](docs/MAKE-IT-YOURS.md)**.
-
-## Where to go next
-
-- **[docs/API.md](docs/API.md)**: everything `platform.c` gives you, with the panel's ids, the screen calls, the
-  audio contract, MIDI, settings, the flash map, timing.
-- **[docs/MAKE-IT-YOURS.md](docs/MAKE-IT-YOURS.md)**: turn Dinghy into your firmware: the name, the package
-  identity, releases, getting into the FM-1 Firmware Hub.
-- **[docs/RULES.md](docs/RULES.md)**: the chip's rules (no FPU, no libgcc, the audio ISR's budget) and what the build
-  checks for you. Read it before your first crash, not after.
+The whole app is [firmware/src/dinghy.c](firmware/src/dinghy.c). It is integer-only, because the chip has no FPU.
+The platform under it is [Dinghy](https://github.com/zvenson/dinghy): [docs/API.md](docs/API.md) has every call, and
+[docs/RULES.md](docs/RULES.md) has the chip's rules.
 
 ## License
 
-GPL-3.0-only, as Felucca and SLOOP: you may change and share it, and whoever gets your firmware gets its source.
-Details, credits and third-party parts in [LICENSING.md](LICENSING.md).
+GPL-3.0-only, like everything it stands on: you may change and share it, and whoever gets the firmware gets its
+source. Credits and third-party parts are in [LICENSING.md](LICENSING.md).
 
-The platform is Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments, with SLOOP's changes (isod89).
-Dinghy (the app, the host mode, the docs) by zvenson.
+NU//METAL SKRATCHMASTER (the app) by Mark Hellar. Built on
+[Dinghy](https://github.com/zvenson/dinghy) (zvenson), on the platform of [Felucca](https://github.com/hugelton/Felucca)
+(Leo Kuroshita, Hügelton Instruments) as [SLOOP](https://github.com/isod89/sloop-fm1) (isod89) carries it. The voice is
+SAM via [ESP8266SAM](https://github.com/earlephilhower/ESP8266SAM) (Earle F. Philhower III), from Sebastian Macke's
+C port of SAM.
