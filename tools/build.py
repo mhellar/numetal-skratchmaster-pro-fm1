@@ -47,7 +47,7 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = "FM-1_926"                # NU//METAL SKRATCHMASTER: one identity for every release (free in the hub's catalogue 2026-10-23; the 99N family is Dinghy's)
+PRODUCT = "FM-1_926"                # NU//METAL SKRATCHMASTER: one identity for every release (the 99N family is Dinghy's)
 SAM_SRC = ("sam", "render", "reciter", "sam_libc")
 VERSION = None                      # APP_VER for release builds
 

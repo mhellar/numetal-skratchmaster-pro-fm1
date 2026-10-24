@@ -2,7 +2,7 @@
 
 # NU//METAL SKRATCHMASTER
 
-**A robot turntablist with a nu metal band, for the M-VAVE FM-1.**
+**For the M-VAVE FM-1.**
 
 The FM-1 becomes a deck. SAM (the 1982 Software Automatic Mouth) says 27 words onto a virtual record, and you scratch
 them with the keys and the jog wheel. Behind you a drop-tuned band plays: chugging guitars, a bass and a 12-piece kit
@@ -14,13 +14,11 @@ the beat, then four bars of hook, where the guitars come in and it shouts the ho
 <p align="center"><img src="docs/screen.png" width="240" alt="The screen: the word on the deck, the platter, its waveform, the 16 steps, the knobs, RAP MODE on"></p>
 
 > **Status: 1.0, runs on the FM-1.** Built and played on the device. Identity `FM-1_926`.
-> Installing firmware is at your own risk; the official firmware goes back on through the
-> [FM-1 Firmware Hub](https://fm1.designburgapps.com) at any time.
+> Installing firmware is at your own risk; M-VAVE's official firmware can be reinstalled at any time.
 
 ## Install
 
-- **The easy way:** the [FM-1 Firmware Hub](https://fm1.designburgapps.com) in Chrome or Edge.
-- **By hand:** download `numetal-X.Y.fwsc` from [Releases](../../releases), then
+- Download `numetal-X.Y.fwsc` from [Releases](../../releases), then
   `python3 tools/fm1_install.py numetal-X.Y.fwsc` (needs `pip3 install mido python-rtmidi`).
 - **Rescue:** hold **OCT-** while switching on. No sound, only the updater. Install anything from there.
 

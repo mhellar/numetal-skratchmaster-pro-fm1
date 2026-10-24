@@ -4,7 +4,7 @@
  *
  *   boot + boot guard   a firmware that crashes at boot falls back to the USB rescue, then to the ROM
  *   USB rescue          OCT- held at power-on: no audio, only the updater (the web installer still works)
- *   updater             the M-UPGRADE SysEx path: the web installer / the hub can always reach the FM-1
+ *   updater             the M-UPGRADE SysEx path: the web installer can always reach the FM-1
  *   USB-MIDI            in and out (midi_get, midi_send)
  *   USB audio           the output as a class-compliant 16-bit stereo input, 44.1 or 48 kHz
  *   keys, knobs, LEDs   fm1_in.notes / buttons, fm1_input_edges, fm1_enc_take, fm1_led_key (hal/fm1_input.h)
