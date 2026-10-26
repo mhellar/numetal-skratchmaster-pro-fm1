@@ -1,0 +1,48 @@
+# PRO: TONE play (HOME twice), a riff on the tone, then the LFO: PITCH vibrato, FADER square = transformer, the PRO page held
+200 btn 12
+250 enc 6 -1
+260 hold 0x40
+270 enc 3 -15
+280 hold 0
+300 btn 8
+400 btn 8
+1000 keys 0x1000
+1400 keys 0
+1500 keys 0x8000
+1900 keys 0x4000
+2300 keys 0x1000
+2700 keys 0x80000
+3100 keys 0x10000
+3500 keys 0
+3600 hold 0x20
+3700 enc 5 1
+3800 enc 4 4
+3900 enc 2 -2
+4600 hold 0
+4700 btn 5
+5000 keys 0x1000
+6500 keys 0x8000
+8000 keys 0
+8100 hold 0x20
+8200 enc 5 1
+8300 enc 3 4
+8400 enc 2 2
+8500 enc 4 7
+9000 hold 0
+9100 keys 0x1000
+10500 keys 0x80000
+12000 keys 0
+12100 enc 1 2
+12200 keys 0x1000
+13600 hold 0x20
+13700 enc 5 2
+13800 enc 3 -4
+14400 hold 0
+14420 keys 0
+14450 hold 0x20
+14460 enc 5 -1
+14470 hold 0
+14500 btn 8
+14600 keys 0x2000000
+17000 keys 0
+19500 end

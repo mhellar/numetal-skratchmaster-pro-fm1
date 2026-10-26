@@ -1,0 +1,15 @@
+# PRO: the MIXER (hold FX): VOX down, BASS up, WIDTH to mono and back, VERB up; then a tap on FX = the next FX
+200 btn 12
+500 keys 0x100000
+700 keys 0
+1500 hold 0x4
+1600 enc 2 -4
+1700 enc 4 3
+1800 enc 6 -15
+1900 keys 0x2000000
+2600 keys 0
+3000 enc 6 15
+3100 enc 0 6
+3800 hold 0
+4000 btn 2
+4500 end

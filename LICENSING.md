@@ -1,6 +1,6 @@
 # Licensing
 
-NU//METAL SKRATCHMASTER, like Dinghy under it, is free software under the GNU General Public License, version 3 only (`GPL-3.0-only`, full text in
+NU//METAL SKRATCHMASTER PRO, like Dinghy under it, is free software under the GNU General Public License, version 3 only (`GPL-3.0-only`, full text in
 `LICENSE`). You may use, study, change and share it. If you give someone a firmware built from it, give them its
 complete source under the same licence too.
 
@@ -10,7 +10,8 @@ complete source under the same licence too.
 | --- | --- |
 | The platform: `firmware/hal/`, `firmware/loader/`, `crt0.S`, `app.ld`, `firmware/src/` (`usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `gfx.c`, `libc.c`, `bootguard.h`, `uac_fir.h`), `tools/` | Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments ([Felucca](https://github.com/hugelton/Felucca)), with the changes of [SLOOP](https://github.com/isod89/sloop-fm1) (isod89) |
 | The wiring `platform.c`, the host mode `tests/host.c`, `docs/` ([Dinghy](https://github.com/zvenson/dinghy)) | zvenson |
-| The app `firmware/src/dinghy.c` (NU//METAL SKRATCHMASTER), `README.md`, the logo, the changes to `tools/build.py` and `tests/run_host.sh` | Copyright (C) 2026 Mark Hellar |
+| The app `firmware/src/dinghy.c` (NU//METAL SKRATCHMASTER PRO), `README.md`, the logo, the changes to `tools/build.py` and `tests/run_host.sh`, `tests/run_pro.sh`, the web installer page `docs/index.html` and its package reader `docs/fwsc.js` | Copyright (C) 2026 Mark Hellar |
+| The Web MIDI update protocol `docs/fm1ota.js` (after `tools/fm1_install.py`) | Copyright (C) 2026 Leo Kuroshita, Hügelton Instruments ([Felucca](https://github.com/hugelton/Felucca)) |
 
 ## Third-party material
 

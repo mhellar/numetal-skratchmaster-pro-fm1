@@ -1,0 +1,23 @@
+# PRO: every technique in turn, AHH held (4 beats each at 100 BPM), then HAMSTER on for CHIRP and CRAB
+200 btn 12
+300 enc 6 -1
+500 keys 0x2000000
+2900 enc 1 1
+5300 enc 1 1
+7700 enc 1 1
+10100 enc 1 1
+12500 enc 1 1
+14900 enc 1 1
+17300 enc 1 1
+19700 enc 1 1
+22100 enc 1 1
+24500 enc 1 1
+26900 enc 1 1
+29300 enc 1 1
+31700 enc 1 1
+34100 enc 1 1
+36500 enc 1 1
+38900 enc 1 1
+41300 enc 1 1
+43700 keys 0
+44000 end

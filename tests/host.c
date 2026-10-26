@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+static double host_audio_ns, host_audio_max;  /* the ISR's cost on this computer (a relative measure, not the FM-1's) */
 
 #ifndef APP_NAME
 #define APP_NAME "DINGHY"
@@ -26,10 +28,11 @@
 
 static volatile uint32_t fm1_ms;
 static struct { uint32_t notes, buttons; } fm1_in;
-static uint32_t host_edges;
-static uint32_t fm1_input_edges(uint32_t *released) { uint32_t b = host_edges; host_edges = 0; *released = 0; return b; }
+static uint32_t host_edges, host_rel;
+static uint32_t fm1_input_edges(uint32_t *released) { uint32_t b = host_edges; host_edges = 0; *released = host_rel; host_rel = 0; return b; }
 static uint32_t fm1_input_note_edges(void) { return 0; }   /* (the script sets fm1_in.notes) */
-static int32_t fm1_enc_take(uint32_t e) { (void)e; return 0; }
+static int32_t host_enc[8];
+static int32_t fm1_enc_take(uint32_t e) { int32_t v = host_enc[e & 7u]; host_enc[e & 7u] = 0; return v; }
 static void fm1_led_key(uint32_t id, int on) { (void)id; (void)on; }
 
 /* the screen: 240 x 240 RGB565, as the ST7789 gets it (gfx.c sends the bytes swapped) */
@@ -86,7 +89,7 @@ static void app_main(void);
 
 /* the script: at t ms, keys down (bit k = key k, 0 = F3), a button edge, a MIDI message. A script file (the second
  * argument) replaces it, a line each: "T keys MASK" (hex or decimal), "T btn ID", "T midi ST D1 D2", "T end" */
-typedef struct { uint32_t t, keys; int btn; uint8_t st, d1, d2; } host_ev_t;
+typedef struct { uint32_t t, keys; int btn; uint8_t st, d1, d2; int enc1, delta, hold1; } host_ev_t;   /* enc1, hold1: + 1, 0 = none */
 static const host_ev_t SCRIPT0[] = {
     {200, 1u << 7, -1, 0, 0, 0},                                /* C4 */
     {700, 1u << 7 | 1u << 11 | 1u << 14, -1, 0, 0, 0},          /* + E4 G4: a chord */
@@ -109,12 +112,14 @@ static void read_script(const char *path)
     uint32_t n = 0;
     if (!f) { perror(path); exit(1); }
     while (fgets(line, sizeof line, f) && n < 4096u) {
-        host_ev_t e = {0, 0, -1, 0, 0, 0};
+        host_ev_t e = {0, 0, -1, 0, 0, 0, 0, 0, 0};
         unsigned a = 0, b = 0, c = 0;
         if (line[0] == '#' || sscanf(line, "%u %15s", &e.t, what) != 2) continue;
         if (!strcmp(what, "end")) { end_ms = e.t; continue; }
         if (!strcmp(what, "keys")) { sscanf(line, "%*u %*s %i", (int *)&e.keys); }
         else if (!strcmp(what, "btn")) { sscanf(line, "%*u %*s %d", &e.btn); }
+        else if (!strcmp(what, "enc")) { sscanf(line, "%*u %*s %d %d", &e.enc1, &e.delta); e.enc1++; }
+        else if (!strcmp(what, "hold")) { sscanf(line, "%*u %*s %i", &e.hold1); e.hold1++; }
         else if (!strcmp(what, "midi")) { sscanf(line, "%*u %*s %i %u %u", (int *)&a, &b, &c); e.st = (uint8_t)a; e.d1 = (uint8_t)b; e.d2 = (uint8_t)c; }
         else continue;
         ev[n++] = e;
@@ -171,7 +176,14 @@ static void platform_poll(void)                 /* one call = one millisecond */
     static int32_t blk[2u * HALF_FRAMES];
     fm1_ms++;
     while (step < script_n && script[step].t <= fm1_ms) {
-        if (script[step].st) {
+        if (script[step].enc1)                      /* an encoder turned */
+            host_enc[(script[step].enc1 - 1) & 7] += script[step].delta;
+        else if (script[step].hold1) {              /* buttons held: a mask; the edges follow */
+            const uint32_t h = (uint32_t)(script[step].hold1 - 1);
+            host_edges |= h & ~fm1_in.buttons;
+            host_rel |= fm1_in.buttons & ~h;
+            fm1_in.buttons = h;
+        } else if (script[step].st) {
             mq[mq_w % 64u][0] = script[step].st; mq[mq_w % 64u][1] = script[step].d1; mq[mq_w % 64u][2] = script[step].d2;
             mq_w++;
         } else if (script[step].btn >= 0)
@@ -185,7 +197,16 @@ static void platform_poll(void)                 /* one call = one millisecond */
         uint32_t i;
         owed -= 1000u * HALF_FRAMES;
         memset(blk, 0, sizeof blk);
-        app_audio(blk, HALF_FRAMES);
+        {
+            struct timespec t0, t1;
+            double ns;
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            app_audio(blk, HALF_FRAMES);
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            ns = (t1.tv_sec - t0.tv_sec) * 1e9 + (t1.tv_nsec - t0.tv_nsec);
+            host_audio_ns += ns;
+            if (ns > host_audio_max) host_audio_max = ns;
+        }
         wav = realloc(wav, (wav_n + HALF_FRAMES) * 4u);
         for (i = 0; i < 2u * HALF_FRAMES; i++) {
             int32_t v = blk[i];                 /* (USB audio at the MASTER knob all the way up) */
@@ -202,6 +223,7 @@ static void platform_poll(void)                 /* one call = one millisecond */
     } else if (shot < sizeof SHOT / sizeof SHOT[0] && fm1_ms == SHOT[shot])
         write_ppm(SHOT[shot++]);
     if (fm1_ms >= end_ms) {
+        printf("audio  %.1f ns a frame on average, worst block %.1f ns a frame\n", host_audio_ns / wav_n, host_audio_max / HALF_FRAMES);
         write_wav();
         exit(0);
     }

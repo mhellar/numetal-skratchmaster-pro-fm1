@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NU//METAL SKRATCHMASTER PRO</title>
+<meta name="description" content="Web installer for NU//METAL SKRATCHMASTER PRO, a robot turntablist with a nu metal band for the M-VAVE FM-1.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2396ff00'/%3E%3Cpath d='M9 26 L19 4 M14 28 L24 6' stroke='%23ff5a14' stroke-width='2.5'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #070807; --panel: #10140e; --line: #24301d; --text: #e1e6dc; --dim: #8a9284;
+    --green: #96ff00; --orange: #ff5a14; --yellow: #ffdc00; --red: #ff3232;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 var(--mono); }
+  a { color: var(--green); }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  header img { width: 76px; height: 76px; }
+  h1 { margin: 0; font-size: clamp(26px, 6vw, 46px); line-height: 1.05; letter-spacing: 1px; }
+  h1 .a { color: var(--green); } h1 .b { color: var(--orange); } h1 .pro { color: var(--yellow); }
+  .tag { color: var(--dim); margin: 6px 0 0; }
+  .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 28px 0; }
+  .shots figure { margin: 0; }
+  .shots img { width: 100%; image-rendering: pixelated; border: 1px solid var(--line); display: block; }
+  .shots figcaption { color: var(--dim); font-size: 13px; margin-top: 6px; }
+  .card { background: var(--panel); border: 1px solid var(--line); padding: 22px; margin: 22px 0; }
+  .card h2 { margin: 0 0 12px; font-size: 20px; color: var(--yellow); letter-spacing: 1px; }
+  ol { padding-left: 22px; margin: 0 0 18px; } li { margin: 4px 0; }
+  button { font: 700 18px var(--mono); letter-spacing: 1px; color: #000; background: var(--green); border: 0;
+           padding: 14px 26px; cursor: pointer; }
+  button:hover:not(:disabled) { background: var(--yellow); }
+  button:disabled { background: var(--line); color: var(--dim); cursor: default; }
+  button.ghost { background: none; color: var(--dim); border: 1px solid var(--line); font-size: 14px; padding: 8px 14px; }
+  .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .meta { color: var(--dim); font-size: 13px; }
+  .bar { height: 10px; background: var(--line); margin: 18px 0 8px; overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: var(--green); transition: width .2s; }
+  #status { min-height: 1.6em; font-weight: 700; }
+  #status.err { color: var(--red); } #status.ok { color: var(--green); } #status.warn { color: var(--yellow); }
+  details { margin-top: 12px; } summary { cursor: pointer; color: var(--dim); }
+  pre#log { background: #000; border: 1px solid var(--line); color: var(--dim); font-size: 12px; max-height: 220px;
+            overflow: auto; padding: 10px; white-space: pre-wrap; margin: 8px 0 0; }
+  .warnbox { border-left: 3px solid var(--orange); padding: 8px 12px; color: var(--text); background: #1a0f08; margin: 0 0 16px; }
+  .feat { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 28px; margin: 0; padding: 0; list-style: none; }
+  .feat li::before { content: "// "; color: var(--orange); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  td, th { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { color: var(--yellow); font-weight: 700; }
+  .scroll { overflow-x: auto; }
+  footer { color: var(--dim); font-size: 13px; margin-top: 40px; }
+  @media (max-width: 640px) {
+    .shots { grid-template-columns: 1fr 1fr; } .shots figure:last-child { display: none; }
+    .feat { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="logo.svg" alt="" onerror="this.style.display='none'">
+    <div>
+      <h1><span class="a">NU//METAL</span> <span class="b">SKRATCHMASTER</span> <span class="pro">PRO</span></h1>
+      <p class="tag">A robot turntablist with a nu metal band, for the M-VAVE FM-1. Version <span id="ver">2.0</span>.</p>
+    </div>
+  </header>
+
+  <div class="shots">
+    <figure><img src="img/scratch-score.png" alt="Scratching TRANSFORM with the technique's score on screen"><figcaption>17 techniques, scored like TTM, with a live playhead</figcaption></figure>
+    <figure><img src="img/pro-page.png" alt="The PRO page with the LFO"><figcaption>The PRO page: a tempo-locked LFO</figcaption></figure>
+    <figure><img src="img/mixer.png" alt="The MIXER page with faders and meters"><figcaption>The MIXER: faders and live meters</figcaption></figure>
+  </div>
+
+  <section class="card">
+    <h2>INSTALL</h2>
+    <div id="nomidi" class="warnbox" hidden>This browser has no Web MIDI. Open this page in <b>Chrome</b> or <b>Edge</b> on a computer.</div>
+    <ol>
+      <li>Plug the FM-1 into this computer with a USB <b>data</b> cable and switch it on.</li>
+      <li>Close other music apps that might be using it (a DAW, the FM-1 editor).</li>
+      <li>Press <b>Install</b> and allow MIDI access when the browser asks (SysEx is how firmware travels).</li>
+      <li>Do not unplug it while it writes (about a minute). It restarts by itself.</li>
+    </ol>
+    <div class="row">
+      <button id="go" disabled>INSTALL</button>
+      <span class="meta" id="pkg">loading the firmware&hellip;</span>
+    </div>
+    <div class="bar"><div id="fill"></div></div>
+    <div id="status"></div>
+    <details>
+      <summary>more: another package, the log</summary>
+      <p class="meta">Install a different <code>.fwsc</code> from your disk (a build of your own, or NU//METAL 1.0):</p>
+      <div class="row"><input type="file" id="file" accept=".fwsc"><span class="meta" id="filemeta"></span></div>
+      <pre id="log"></pre>
+    </details>
+    <p class="meta" style="margin:14px 0 0">If something goes wrong: hold <b>OCT-</b> while switching the FM-1 on. That starts only the
+      updater, with no sound. Then press Install again. M-VAVE's official firmware can be reinstalled at any time. Installing firmware is at your own risk.</p>
+  </section>
+
+  <section class="card">
+    <h2>WHAT IT DOES</h2>
+    <p>The FM-1 becomes a deck. SAM, the 1982 Software Automatic Mouth, says 27 words onto a virtual record, and you
+      scratch them with the keys and the jog wheel. Behind you, a drop-tuned band plays double-tracked chugging guitars,
+      a bass and a 12-piece kit locked to ten grooves. In RAP MODE the robot is the MC: verses that fit the beat, then a
+      growled hook.</p>
+    <ul class="feat">
+      <li>A real LFO: 11 synced rates, 7 shapes, 6 destinations</li>
+      <li>17 scratch techniques and COMBO routines</li>
+      <li>HAMSTER, crossfader CURVE, motor TORQUE</li>
+      <li>TONE PLAY: the keys as a pitch fader</li>
+      <li>AHHH and FRESH, the battle-record classics</li>
+      <li>Vocal chain, stereo plate, glue and soft limit</li>
+      <li>A MIXER with faders and meters</li>
+      <li>MIDI clock sync, velocity skratch, 9 FX</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>QUICK START</h2>
+    <div class="scroll">
+    <table>
+      <tr><th>Do this</th><th>And</th></tr>
+      <tr><td>PLAY, then ARP</td><td>the band starts and the robot raps</td></tr>
+      <tr><td>tap a key / hold a key</td><td>say the word / scratch it in the STYLE (turn ALGORITHM)</td></tr>
+      <tr><td>turn SELECT</td><td>scratch by hand; flick it and let go and the record spins on</td></tr>
+      <tr><td>hold LFO + turn</td><td>the PRO page: LFO rate, shape, depth, destination, reverb, curve, torque (tap LFO = on/off)</td></tr>
+      <tr><td>hold FX + turn</td><td>the MIXER: vox, guitar, bass, drums, verb, echo, width (tap FX = next FX)</td></tr>
+      <tr><td>HOME</td><td>DJ, BEAT (the kit on the keys), TONE (the keys as a pitch fader)</td></tr>
+      <tr><td>hold EDIT</td><td>the second layer of every button, and the audio load</td></tr>
+    </table>
+    </div>
+    <p class="meta">Every control is in the <a href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#play">README</a>.</p>
+  </section>
+
+  <footer>
+    NU//METAL SKRATCHMASTER PRO by Mark Hellar &middot; GPL-3.0 &middot;
+    <a href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1">source on GitHub</a><br>
+    Built on <a href="https://github.com/zvenson/dinghy">Dinghy</a> (zvenson) and
+    <a href="https://github.com/hugelton/Felucca">Felucca</a> (Leo Kuroshita, H&uuml;gelton Instruments), whose update
+    protocol this page uses. The voice is SAM via ESP8266SAM. M-VAVE and FM-1 belong to their owners; this is not made
+    or endorsed by them.
+  </footer>
+</main>
+
+<script type="module">
+import { Updater } from "./fm1ota.js";
+import { readPackage } from "./fwsc.js";
+
+const FIRMWARE = "firmware/numetal-pro-2.0.fwsc";     // a new release: put it in docs/firmware/ and change this
+const $ = (id) => document.getElementById(id);
+let pkg = null, busy = false;
+
+const log = (s) => { $("log").textContent += s + "\n"; $("log").scrollTop = 1e9; };
+const say = (s, cls = "") => { $("status").textContent = s; $("status").className = cls; };
+const bar = (p) => { $("fill").style.width = Math.max(0, Math.min(100, p)) + "%"; };
+
+const ERR = {
+  notfound: "FM-1 not found. Check the USB data cable, switch it on, and close other apps that use it.",
+  model: "That is not an FM-1, or the package is for another device.",
+  stopped: "The FM-1 stopped answering. Nothing was written: press Install again.",
+  lost: "The FM-1 was disconnected. Replug it and press Install again: it finishes what it started.",
+  noloader: "The update loader did not appear. Replug the USB cable and press Install again.",
+  noreturn: "Written, but the FM-1 did not come back. Switch it off and on.",
+  mismatch: "Written, but the FM-1 reports another firmware",
+  badreq: "The FM-1 asked for something outside the package. Download the page again.",
+};
+
+async function load(raw, label) {
+  try {
+    pkg = { ...readPackage(raw), label };
+    $("pkg").textContent = `${label} · ${(raw.length / 1024).toFixed(0)} KB · ${pkg.product} · checked`;
+    $("go").disabled = !navigator.requestMIDIAccess;
+    log(`package ${label}: ${pkg.product}, ${pkg.image.length} bytes, CRCs ok`);
+  } catch (e) {
+    pkg = null;
+    $("go").disabled = true;
+    $("pkg").textContent = `${label}: ${e.message}`;
+    say(e.message, "err");
+  }
+}
+
+async function step(k, a) {
+  if (k === "start") { say(`Starting the update on ${a}…`); bar(2); log(`device ${a}`); }
+  else if (k === "verify") { say("Checking the package on the FM-1…"); bar(2 + Math.min(8, a / 4)); }
+  else if (k === "loader") { say("Switching to update mode…"); bar(12); log("loader"); }
+  else if (k === "write") {
+    const p = pkg ? Math.min(99, Math.round((a * 512) / pkg.image.length * 100)) : 50;
+    say(`Writing… ${p}%`); bar(12 + p * 0.85);
+  }
+  else if (k === "reboot") { say("Restarting…"); bar(98); log("reboot"); }
+  else if (k === "done") { say(`Done: the FM-1 runs ${a}. Press PLAY, then ARP.`, "ok"); bar(100); log(`done ${a}`); }
+}
+
+async function install(resume = false) {
+  if (!pkg || busy) return;
+  busy = true; $("go").disabled = true; bar(0);
+  try {
+    const midi = await navigator.requestMIDIAccess({ sysex: true });
+    const up = new Updater(midi, log);
+    say("Looking for the FM-1…");
+    const resumed = await up.resume(pkg.image, step, pkg.product, resume ? 20000 : 0);   // left in update mode?
+    if (!resumed) await up.install(pkg.image, pkg.product, step);
+  } catch (e) {
+    if (e.code === "reload") {                  // Chrome on Linux: the loader's input only shows on a new page
+      try { sessionStorage.setItem("nm-resume", pkg.label); } catch (_) {}
+      say("Reloading to reach the update loader…", "warn");
+      setTimeout(() => location.reload(), 600);
+      return;
+    }
+    if (e.name === "SecurityError" || e.name === "NotAllowedError") say("MIDI access was refused. Allow it (with SysEx) and try again.", "err");
+    else say((ERR[e.code] || e.message) + (e.code === "mismatch" ? `: ${e.detail}` : ""), "err");
+    log(`error ${e.code || e.name}: ${e.message}`);
+  } finally {
+    busy = false;
+    $("go").disabled = !pkg;
+  }
+}
+
+$("go").addEventListener("click", () => install(false));
+$("file").addEventListener("change", async (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  await load(new Uint8Array(await f.arrayBuffer()), f.name);
+  $("filemeta").textContent = pkg ? "ready: press Install" : "";
+});
+
+if (!navigator.requestMIDIAccess) $("nomidi").hidden = false;
+try {
+  const r = await fetch(FIRMWARE, { cache: "no-cache" });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  await load(new Uint8Array(await r.arrayBuffer()), FIRMWARE.split("/").pop());
+  const v = /(\d+\.\d+)\.fwsc$/.exec(FIRMWARE);
+  if (v) $("ver").textContent = v[1];
+} catch (e) {
+  $("pkg").textContent = `could not load the firmware (${e.message})`;
+}
+let back = null;
+try { back = sessionStorage.getItem("nm-resume"); sessionStorage.removeItem("nm-resume"); } catch (_) {}
+if (back && pkg) install(true);
+</script>
+</body>
+</html>
