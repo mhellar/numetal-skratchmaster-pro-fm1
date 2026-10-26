@@ -4,166 +4,274 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NU//METAL SKRATCHMASTER PRO</title>
-<meta name="description" content="Web installer for NU//METAL SKRATCHMASTER PRO, a robot turntablist with a nu metal band for the M-VAVE FM-1.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2396ff00'/%3E%3Cpath d='M9 26 L19 4 M14 28 L24 6' stroke='%23ff5a14' stroke-width='2.5'/%3E%3C/svg%3E">
+<meta name="description" content="Install NU//METAL SKRATCHMASTER PRO on the M-VAVE FM-1 from the browser: a robot turntablist with a nu metal band.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23c0321d'/%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%23ebe4d2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Special+Elite&display=swap" rel="stylesheet">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <style>
   :root {
-    --bg: #070807; --panel: #10140e; --line: #24301d; --text: #e1e6dc; --dim: #8a9284;
-    --green: #96ff00; --orange: #ff5a14; --yellow: #ffdc00; --red: #ff3232;
-    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --ink: #0f0e0c; --soot: #191714; --ash: #2a2622; --bone: #ebe4d2; --paper: #ddd4bd; --fade: #8c8474;
+    --rust: #c0321d; --blood: #7a170e; --tape: #e3d699;
+    --type: "Special Elite", "Courier New", monospace;
+    --block: "Anton", Impact, "Arial Narrow", sans-serif;
+    --hand: "Permanent Marker", "Comic Sans MS", cursive;
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --torn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 16' preserveAspectRatio='none'%3E%3Cpath d='M0 16 L0 9 L14 6 L22 10 L37 4 L49 8 L61 3 L70 9 L88 5 L97 11 L112 4 L125 7 L131 2 L146 8 L160 5 L171 10 L186 3 L199 7 L212 4 L220 9 L236 2 L249 8 L258 5 L273 10 L287 3 L296 8 L311 5 L322 11 L338 4 L350 7 L361 2 L374 9 L388 5 L400 8 L400 16 Z' fill='%23ddd4bd'/%3E%3C/svg%3E");
   }
   * { box-sizing: border-box; }
   html { color-scheme: dark; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 var(--mono); }
-  a { color: var(--green); }
-  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
-  header { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
-  header img { width: 76px; height: 76px; }
-  h1 { margin: 0; font-size: clamp(26px, 6vw, 46px); line-height: 1.05; letter-spacing: 1px; }
-  h1 .a { color: var(--green); } h1 .b { color: var(--orange); } h1 .pro { color: var(--yellow); }
-  .tag { color: var(--dim); margin: 6px 0 0; }
-  .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 28px 0; }
-  .shots figure { margin: 0; }
-  .shots img { width: 100%; image-rendering: pixelated; border: 1px solid var(--line); display: block; }
-  .shots figcaption { color: var(--dim); font-size: 13px; margin-top: 6px; }
-  .card { background: var(--panel); border: 1px solid var(--line); padding: 22px; margin: 22px 0; }
-  .card h2 { margin: 0 0 12px; font-size: 20px; color: var(--yellow); letter-spacing: 1px; }
-  ol { padding-left: 22px; margin: 0 0 18px; } li { margin: 4px 0; }
-  button { font: 700 18px var(--mono); letter-spacing: 1px; color: #000; background: var(--green); border: 0;
-           padding: 14px 26px; cursor: pointer; }
-  button:hover:not(:disabled) { background: var(--yellow); }
-  button:disabled { background: var(--line); color: var(--dim); cursor: default; }
-  button.ghost { background: none; color: var(--dim); border: 1px solid var(--line); font-size: 14px; padding: 8px 14px; }
-  .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-  .meta { color: var(--dim); font-size: 13px; }
-  .bar { height: 10px; background: var(--line); margin: 18px 0 8px; overflow: hidden; }
-  .bar > div { height: 100%; width: 0; background: var(--green); transition: width .2s; }
-  #status { min-height: 1.6em; font-weight: 700; }
-  #status.err { color: var(--red); } #status.ok { color: var(--green); } #status.warn { color: var(--yellow); }
-  details { margin-top: 12px; } summary { cursor: pointer; color: var(--dim); }
-  pre#log { background: #000; border: 1px solid var(--line); color: var(--dim); font-size: 12px; max-height: 220px;
-            overflow: auto; padding: 10px; white-space: pre-wrap; margin: 8px 0 0; }
-  .warnbox { border-left: 3px solid var(--orange); padding: 8px 12px; color: var(--text); background: #1a0f08; margin: 0 0 16px; }
-  .feat { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 28px; margin: 0; padding: 0; list-style: none; }
-  .feat li::before { content: "// "; color: var(--orange); }
-  table { border-collapse: collapse; width: 100%; font-size: 14px; }
-  td, th { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
-  th { color: var(--yellow); font-weight: 700; }
-  .scroll { overflow-x: auto; }
-  footer { color: var(--dim); font-size: 13px; margin-top: 40px; }
-  @media (max-width: 640px) {
-    .shots { grid-template-columns: 1fr 1fr; } .shots figure:last-child { display: none; }
-    .feat { grid-template-columns: 1fr; }
+  body { margin: 0; background: var(--soot); color: var(--bone); font: 17px/1.6 var(--type); overflow-x: hidden; }
+  body::after { content: ""; position: fixed; inset: 0; background: var(--grain); opacity: .22; pointer-events: none; z-index: 50; mix-blend-mode: overlay; }
+  a { color: inherit; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  a:hover { color: var(--rust); }
+  code { font-family: var(--type); background: rgba(0,0,0,.12); padding: 0 4px; }
+
+  /* the head */
+  .hero { position: relative; min-height: min(92vh, 860px); background:
+      radial-gradient(ellipse at 60% 40%, #2c2722 0%, #15130f 60%, #0b0a08 100%); overflow: hidden; }
+  .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .hero::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); }
+  .hero .over { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; padding: 0 clamp(16px, 5vw, 64px) clamp(28px, 6vh, 64px); pointer-events: none; }
+  .kicker { font-size: 14px; letter-spacing: 3px; color: var(--fade); text-transform: uppercase; margin: 0 0 6px; }
+  h1 { margin: 0; line-height: .82; font-weight: 400; }
+  h1 .nu { display: block; font: 400 clamp(64px, 15vw, 190px)/.82 var(--block); color: var(--bone); letter-spacing: -2px;
+      text-shadow: 4px 3px 0 var(--rust); transform: skewX(-4deg); }
+  h1 .sk { display: inline-block; font: 400 clamp(34px, 7.2vw, 92px)/1 var(--hand); color: var(--rust);
+      transform: rotate(-4deg) translate(clamp(12px, 4vw, 60px), -.12em); text-shadow: 2px 2px 0 #000; }
+  .stamp { display: inline-grid; place-items: center; width: clamp(66px, 9vw, 98px); aspect-ratio: 1; border-radius: 50%;
+      border: 3px solid var(--bone); color: var(--bone); font: 400 clamp(20px, 3vw, 30px)/1 var(--block); letter-spacing: 1px;
+      transform: rotate(12deg) translate(clamp(18px, 5vw, 70px), -.6em); vertical-align: middle; opacity: .9;
+      box-shadow: inset 0 0 0 4px transparent, inset 0 0 0 6px var(--bone); }
+  .sub { margin: 14px 0 0; max-width: 34em; color: var(--bone); font-size: clamp(15px, 1.8vw, 18px); text-shadow: 0 1px 2px #000; }
+  .snd { position: absolute; z-index: 3; top: 18px; right: clamp(16px, 4vw, 40px); font: 400 16px var(--hand);
+      background: var(--bone); color: var(--ink); border: 0; padding: 8px 16px 7px; transform: rotate(2deg);
+      box-shadow: 3px 3px 0 #000; cursor: pointer; }
+  .snd:hover { background: var(--tape); }
+  .snd[aria-pressed="true"] { background: var(--rust); color: var(--bone); }
+  .readout { position: absolute; z-index: 3; top: 22px; left: clamp(16px, 4vw, 40px); font-size: 13px; letter-spacing: 2px;
+      color: var(--fade); text-transform: uppercase; }
+  .readout b { color: var(--bone); font-weight: 400; }
+
+  /* paper */
+  .paper { position: relative; background: var(--paper); color: var(--ink); margin-top: 14px; }
+  .paper::before { content: ""; position: absolute; left: 0; right: 0; top: -14px; height: 15px; background: var(--torn) 0 0 / 100% 100%; }
+  .paper::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse at 50% 30%, transparent 55%, rgba(60,40,10,.18) 100%), var(--grain); opacity: .9; mix-blend-mode: multiply; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 56px clamp(16px, 5vw, 48px); position: relative; z-index: 1; }
+  .tape { display: inline-block; font: 400 clamp(36px, 6vw, 60px)/1 var(--block); letter-spacing: 1px; margin: 0 0 22px;
+      padding: 6px 18px 2px; background: var(--tape); color: var(--ink); transform: rotate(-1.5deg);
+      box-shadow: 0 2px 0 rgba(0,0,0,.15); clip-path: polygon(0 4%, 3% 0, 97% 3%, 100% 0, 99% 96%, 96% 100%, 3% 97%, 1% 100%); }
+  .dark .tape { background: var(--bone); }
+
+  .install { display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: start; }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+  .steps li { counter-increment: s; position: relative; padding-left: 46px; margin: 0 0 14px; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: -4px; font: 400 32px/1 var(--hand); color: var(--rust); }
+  .deckbox { background: var(--ink); color: var(--bone); padding: 26px; transform: rotate(.6deg); box-shadow: 6px 6px 0 rgba(0,0,0,.35); }
+  .go { width: 100%; font: 400 34px/1 var(--block); letter-spacing: 3px; color: var(--ink); cursor: pointer; padding: 18px 10px 14px;
+      border: 2px solid #000; border-radius: 3px;
+      background: linear-gradient(180deg, #f4f1ea 0%, #b9b5ad 18%, #e9e6df 40%, #8f8b84 62%, #d6d3cc 82%, #9a968f 100%);
+      box-shadow: inset 0 1px 0 #fff, inset 0 -2px 0 rgba(0,0,0,.35), 0 3px 0 #000; text-shadow: 0 1px 0 rgba(255,255,255,.6); }
+  .go:hover:not(:disabled) { filter: brightness(1.08) sepia(.35); }
+  .go:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff, 0 1px 0 #000; }
+  .go:disabled { filter: grayscale(1) brightness(.45); cursor: default; }
+  .go small { display: block; font: 400 14px var(--hand); letter-spacing: 1px; margin-top: 6px; color: var(--blood); text-shadow: none; }
+  .pkg { font-size: 13px; color: var(--fade); margin: 12px 0 0; word-break: break-word; }
+  .meter { display: flex; gap: 3px; margin: 22px 0 10px; height: 18px; }
+  .meter i { flex: 1; background: #2b2723; transition: background .15s; }
+  .meter i.on { background: var(--bone); }
+  .meter i.on.hot { background: var(--tape); }
+  .meter i.on.red { background: var(--rust); }
+  .status { min-height: 1.6em; font-size: 17px; }
+  .status.err { color: #ff6a4f; } .status.ok { color: var(--tape); }
+  .nomidi { background: var(--rust); color: var(--bone); padding: 10px 14px; margin: 0 0 18px; transform: rotate(-.5deg); }
+  details { margin-top: 16px; font-size: 14px; } summary { cursor: pointer; color: var(--fade); }
+  pre.log { background: #000; color: #9a927f; font: 12px/1.45 var(--type); max-height: 200px; overflow: auto; padding: 10px; white-space: pre-wrap; margin: 10px 0 0; }
+  input[type=file] { font: 13px var(--type); color: var(--bone); max-width: 100%; }
+  .fine { font-size: 14px; margin: 22px 0 0; }
+
+  /* photos */
+  .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 3vw, 34px); padding: 10px 0 20px; }
+  .photo { margin: 0; background: #f2efe6; padding: 10px 10px 14px; box-shadow: 4px 6px 0 rgba(0,0,0,.45); position: relative; color: var(--ink); }
+  .photo:nth-child(1) { transform: rotate(-2.4deg); } .photo:nth-child(2) { transform: rotate(1.6deg) translateY(10px); } .photo:nth-child(3) { transform: rotate(-.8deg); }
+  .photo::before { content: ""; position: absolute; top: -12px; left: 50%; width: 90px; height: 26px; margin-left: -45px;
+      background: rgba(227,214,153,.82); transform: rotate(-3deg); }
+  .photo img { width: 100%; display: block; image-rendering: pixelated; filter: contrast(1.1); }
+  .photo figcaption { font: 400 17px/1.25 var(--hand); margin-top: 10px; }
+
+  /* tracklist */
+  .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
+  .side h3 { font: 400 22px var(--block); letter-spacing: 4px; color: var(--rust); margin: 0 0 8px; border-bottom: 2px solid currentColor; padding-bottom: 4px; }
+  .side ol { list-style: none; margin: 0 0 24px; padding: 0; }
+  .side li { display: grid; grid-template-columns: 40px 1fr; gap: 8px; padding: 9px 0; border-bottom: 1px dashed #4a443c; }
+  .side li span { color: var(--rust); font-family: var(--block); font-size: 20px; line-height: 1.2; }
+  .side li b { font: 400 21px/1.15 var(--block); letter-spacing: .5px; display: block; }
+  .side li em { font-style: normal; color: var(--fade); font-size: 14px; }
+  .blurb { max-width: 46em; margin: 0 0 30px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  td { border-bottom: 1px solid rgba(15,14,12,.25); padding: 9px 10px 9px 0; vertical-align: top; }
+  td:first-child { font: 400 18px/1.3 var(--block); letter-spacing: .5px; white-space: nowrap; width: 1%; padding-right: 26px; }
+
+  footer { padding: 46px 0 70px; color: var(--fade); font-size: 13px; }
+  .barcode { height: 54px; width: 230px; margin: 0 0 6px;
+      background: repeating-linear-gradient(90deg, var(--bone) 0 2px, transparent 2px 4px, var(--bone) 4px 5px, transparent 5px 9px, var(--bone) 9px 12px, transparent 12px 13px, var(--bone) 13px 14px, transparent 14px 18px); }
+  .code { letter-spacing: 6px; color: var(--bone); margin: 0 0 22px; }
+
+  @media (max-width: 760px) {
+    .install, .sides { grid-template-columns: 1fr; }
+    .photos { grid-template-columns: 1fr 1fr; }
+    .photo:nth-child(3) { display: none; }
+    td:first-child { white-space: normal; }
   }
+  @media (prefers-reduced-motion: reduce) { .meter i { transition: none; } }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <img src="logo.svg" alt="" onerror="this.style.display='none'">
-    <div>
-      <h1><span class="a">NU//METAL</span> <span class="b">SKRATCHMASTER</span> <span class="pro">PRO</span></h1>
-      <p class="tag">A robot turntablist with a nu metal band, for the M-VAVE FM-1. Version <span id="ver">2.0</span>.</p>
-    </div>
-  </header>
 
-  <div class="shots">
-    <figure><img src="img/scratch-score.png" alt="Scratching TRANSFORM with the technique's score on screen"><figcaption>17 techniques, scored like TTM, with a live playhead</figcaption></figure>
-    <figure><img src="img/pro-page.png" alt="The PRO page with the LFO"><figcaption>The PRO page: a tempo-locked LFO</figcaption></figure>
-    <figure><img src="img/mixer.png" alt="The MIXER page with faders and meters"><figcaption>The MIXER: faders and live meters</figcaption></figure>
+<section class="hero" id="hero">
+  <canvas id="deck" aria-hidden="true"></canvas>
+  <div class="readout" id="readout">FM-1 CUSTOM FIRMWARE &middot; <b>SIDE A</b></div>
+  <button class="snd" id="snd" aria-pressed="false" hidden>&#9654; hear the cuts</button>
+  <div class="over">
+    <p class="kicker">for the M-VAVE FM-1 &middot; v<span id="ver">2.0</span> &middot; GPL-3</p>
+    <h1><span class="nu">NU//METAL</span><span class="sk">Skratchmaster</span><span class="stamp">PRO</span></h1>
+    <p class="sub">A robot turntablist and a drop-tuned band in a pocket synth. Plug it in, drop the needle, flash it from this page.</p>
   </div>
+</section>
 
-  <section class="card">
-    <h2>INSTALL</h2>
-    <div id="nomidi" class="warnbox" hidden>This browser has no Web MIDI. Open this page in <b>Chrome</b> or <b>Edge</b> on a computer.</div>
-    <ol>
-      <li>Plug the FM-1 into this computer with a USB <b>data</b> cable and switch it on.</li>
-      <li>Close other music apps that might be using it (a DAW, the FM-1 editor).</li>
-      <li>Press <b>Install</b> and allow MIDI access when the browser asks (SysEx is how firmware travels).</li>
-      <li>Do not unplug it while it writes (about a minute). It restarts by itself.</li>
-    </ol>
-    <div class="row">
-      <button id="go" disabled>INSTALL</button>
-      <span class="meta" id="pkg">loading the firmware&hellip;</span>
+<section class="paper" id="install">
+  <div class="wrap install">
+    <div>
+      <h2 class="tape">INSTALL</h2>
+      <div class="nomidi" id="nomidi" hidden>No Web MIDI in this browser. Open the page in <b>Chrome</b> or <b>Edge</b> on a computer.</div>
+      <ol class="steps">
+        <li>Plug the FM-1 in with a USB <b>data</b> cable and switch it on.</li>
+        <li>Close anything else that might be talking to it: a DAW, the FM-1 editor.</li>
+        <li>Hit <b>INSTALL</b> and allow MIDI when the browser asks. SysEx is how the firmware travels.</li>
+        <li>Leave the cable alone for about a minute. The head turns into a record; when it has, the FM-1 restarts on its own.</li>
+      </ol>
+      <p class="fine">Something went wrong? Hold <b>OCT-</b> while switching the FM-1 on. That starts only the updater, silent. Then hit INSTALL again.
+        M-VAVE's official firmware can go back on any time. Flashing is at your own risk.</p>
     </div>
-    <div class="bar"><div id="fill"></div></div>
-    <div id="status"></div>
-    <details>
-      <summary>more: another package, the log</summary>
-      <p class="meta">Install a different <code>.fwsc</code> from your disk (a build of your own, or NU//METAL 1.0):</p>
-      <div class="row"><input type="file" id="file" accept=".fwsc"><span class="meta" id="filemeta"></span></div>
-      <pre id="log"></pre>
-    </details>
-    <p class="meta" style="margin:14px 0 0">If something goes wrong: hold <b>OCT-</b> while switching the FM-1 on. That starts only the
-      updater, with no sound. Then press Install again. M-VAVE's official firmware can be reinstalled at any time. Installing firmware is at your own risk.</p>
-  </section>
+    <div class="deckbox">
+      <button class="go" id="go" disabled>INSTALL<small>drop the needle</small></button>
+      <p class="pkg" id="pkg">pulling the record off the shelf&hellip;</p>
+      <div class="meter" id="meter" aria-hidden="true"></div>
+      <div class="status" id="status" role="status"></div>
+      <details>
+        <summary>another .fwsc, the log</summary>
+        <p>Install a package from your disk instead (your own build, or NU//METAL 1.0):</p>
+        <input type="file" id="file" accept=".fwsc"> <span id="filemeta"></span>
+        <pre class="log" id="log"></pre>
+      </details>
+    </div>
+  </div>
+</section>
 
-  <section class="card">
-    <h2>WHAT IT DOES</h2>
-    <p>The FM-1 becomes a deck. SAM, the 1982 Software Automatic Mouth, says 27 words onto a virtual record, and you
-      scratch them with the keys and the jog wheel. Behind you, a drop-tuned band plays double-tracked chugging guitars,
-      a bass and a 12-piece kit locked to ten grooves. In RAP MODE the robot is the MC: verses that fit the beat, then a
-      growled hook.</p>
-    <ul class="feat">
-      <li>A real LFO: 11 synced rates, 7 shapes, 6 destinations</li>
-      <li>17 scratch techniques and COMBO routines</li>
-      <li>HAMSTER, crossfader CURVE, motor TORQUE</li>
-      <li>TONE PLAY: the keys as a pitch fader</li>
-      <li>AHHH and FRESH, the battle-record classics</li>
-      <li>Vocal chain, stereo plate, glue and soft limit</li>
-      <li>A MIXER with faders and meters</li>
-      <li>MIDI clock sync, velocity skratch, 9 FX</li>
-    </ul>
-  </section>
+<section class="dark">
+  <div class="wrap">
+    <div class="photos">
+      <figure class="photo"><img src="img/scratch-score.png" alt="Scratching TRANSFORM with the technique's score on screen"><figcaption>17 techniques, scored, live playhead</figcaption></figure>
+      <figure class="photo"><img src="img/pro-page.png" alt="The PRO page with the LFO"><figcaption>the PRO page: LFO locked to the beat</figcaption></figure>
+      <figure class="photo"><img src="img/mixer.png" alt="The MIXER page with faders and meters"><figcaption>the MIXER, with meters</figcaption></figure>
+    </div>
 
-  <section class="card">
-    <h2>QUICK START</h2>
-    <div class="scroll">
+    <h2 class="tape">TRACKLISTING</h2>
+    <p class="blurb">SAM, the 1982 Software Automatic Mouth, says 27 words onto a virtual record and you cut them up with the keys and the jog wheel.
+      Behind you: double-tracked chugging guitars, a bass and a twelve-piece kit locked to ten grooves. Switch on RAP MODE and the robot takes the mic.</p>
+    <div class="sides">
+      <div class="side"><h3>SIDE A &middot; THE DECK</h3><ol>
+        <li><span>01</span><div><b>17 TECHNIQUES</b><em>baby to crab to flare, each one drawn as a score</em></div></li>
+        <li><span>02</span><div><b>COMBO ROUTINES</b><em>techniques chained into phrases</em></div></li>
+        <li><span>03</span><div><b>HAMSTER / CURVE / TORQUE</b><em>flip the fader, shape it, weigh the platter</em></div></li>
+        <li><span>04</span><div><b>AHHH + FRESH</b><em>the battle-record classics</em></div></li>
+      </ol></div>
+      <div class="side"><h3>SIDE B &middot; THE BAND</h3><ol>
+        <li><span>05</span><div><b>A REAL LFO</b><em>11 synced rates, 7 shapes, 6 destinations</em></div></li>
+        <li><span>06</span><div><b>TONE PLAY</b><em>the keys as a pitch fader</em></div></li>
+        <li><span>07</span><div><b>THE MIXER</b><em>vox, guitar, bass, drums, verb, echo, width</em></div></li>
+        <li><span>08</span><div><b>STUDIO GLUE</b><em>vocal chain, stereo plate, bus comp, soft limit</em></div></li>
+      </ol></div>
+    </div>
+  </div>
+</section>
+
+<section class="paper">
+  <div class="wrap">
+    <h2 class="tape">LINER NOTES</h2>
     <table>
-      <tr><th>Do this</th><th>And</th></tr>
-      <tr><td>PLAY, then ARP</td><td>the band starts and the robot raps</td></tr>
-      <tr><td>tap a key / hold a key</td><td>say the word / scratch it in the STYLE (turn ALGORITHM)</td></tr>
-      <tr><td>turn SELECT</td><td>scratch by hand; flick it and let go and the record spins on</td></tr>
-      <tr><td>hold LFO + turn</td><td>the PRO page: LFO rate, shape, depth, destination, reverb, curve, torque (tap LFO = on/off)</td></tr>
-      <tr><td>hold FX + turn</td><td>the MIXER: vox, guitar, bass, drums, verb, echo, width (tap FX = next FX)</td></tr>
+      <tr><td>PLAY, then ARP</td><td>the band kicks in and the robot raps</td></tr>
+      <tr><td>tap / hold a key</td><td>say the word / scratch it in the STYLE you picked with ALGORITHM</td></tr>
+      <tr><td>turn SELECT</td><td>scratch by hand; flick it, let go, and the record keeps spinning</td></tr>
+      <tr><td>hold LFO + turn</td><td>the PRO page: rate, shape, depth, destination, reverb, curve, torque. Tap LFO for on/off</td></tr>
+      <tr><td>hold FX + turn</td><td>the MIXER. Tap FX for the next effect</td></tr>
       <tr><td>HOME</td><td>DJ, BEAT (the kit on the keys), TONE (the keys as a pitch fader)</td></tr>
       <tr><td>hold EDIT</td><td>the second layer of every button, and the audio load</td></tr>
     </table>
-    </div>
-    <p class="meta">Every control is in the <a href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#play">README</a>.</p>
-  </section>
+    <p class="fine">Every control is in the <a href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#play">README</a>.</p>
+  </div>
+</section>
 
-  <footer>
-    NU//METAL SKRATCHMASTER PRO by Mark Hellar &middot; GPL-3.0 &middot;
-    <a href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1">source on GitHub</a><br>
-    Built on <a href="https://github.com/zvenson/dinghy">Dinghy</a> (zvenson) and
-    <a href="https://github.com/hugelton/Felucca">Felucca</a> (Leo Kuroshita, H&uuml;gelton Instruments), whose update
-    protocol this page uses. The voice is SAM via ESP8266SAM. M-VAVE and FM-1 belong to their owners; this is not made
-    or endorsed by them.
-  </footer>
-</main>
+<section class="dark">
+  <div class="wrap">
+    <footer>
+      <div class="barcode" aria-hidden="true"></div>
+      <p class="code">FM-1_926</p>
+      NU//METAL SKRATCHMASTER PRO by Mark Hellar &middot; GPL-3.0 &middot;
+      <a href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1">source on GitHub</a><br>
+      Built on <a href="https://github.com/zvenson/dinghy">Dinghy</a> (zvenson) and
+      <a href="https://github.com/hugelton/Felucca">Felucca</a> (Leo Kuroshita, H&uuml;gelton Instruments), whose update protocol this page speaks.
+      The voice is SAM via ESP8266SAM. The scratch track on this page is the firmware itself, rendered by its host build.<br>
+      The head is based on <a href="https://sketchfab.com/3d-models/head-d42e5aeb26934241aa398ada9fd1f38a">"HEAD"</a> by
+      <a href="https://sketchfab.com/Colin.Greenall">Colin.Greenall</a>, licensed under
+      <a href="http://creativecommons.org/licenses/by/4.0/">CC-BY-4.0</a>; drawn here with a shader of our own.<br>
+      M-VAVE and FM-1 belong to their owners; this is not made or endorsed by them.
+    </footer>
+  </div>
+</section>
 
 <script type="module">
 import { Updater } from "./fm1ota.js";
 import { readPackage } from "./fwsc.js";
 
 const FIRMWARE = "firmware/numetal-pro-2.0.fwsc";     // a new release: put it in docs/firmware/ and change this
+const TRACK = "audio/scratch-techniques.mp3";          // tests/pro_techniques.txt through the host build
 const $ = (id) => document.getElementById(id);
-let pkg = null, busy = false;
+let pkg = null, busy = false, deck = null;
 
+const SEGS = 28;
+$("meter").innerHTML = "<i></i>".repeat(SEGS);
 const log = (s) => { $("log").textContent += s + "\n"; $("log").scrollTop = 1e9; };
-const say = (s, cls = "") => { $("status").textContent = s; $("status").className = cls; };
-const bar = (p) => { $("fill").style.width = Math.max(0, Math.min(100, p)) + "%"; };
+const say = (s, cls = "") => { $("status").textContent = s; $("status").className = "status " + cls; };
+const bar = (p) => {
+  p = Math.max(0, Math.min(100, p));
+  [...$("meter").children].forEach((el, i) => {
+    const on = (i + 0.5) / SEGS * 100 <= p;
+    el.className = on ? (i >= SEGS - 3 ? "on red" : i >= SEGS - 8 ? "on hot" : "on") : "";
+  });
+  $("readout").innerHTML = p > 0 && p < 100 ? `CUTTING &middot; <b>${Math.round(p)}%</b>`
+    : p >= 100 ? "FM-1 CUSTOM FIRMWARE &middot; <b>PRESSED</b>" : "FM-1 CUSTOM FIRMWARE &middot; <b>SIDE A</b>";
+  deck?.progress(p / 100);
+};
 
 const ERR = {
-  notfound: "FM-1 not found. Check the USB data cable, switch it on, and close other apps that use it.",
+  notfound: "No FM-1 found. Check the USB data cable, switch it on, close other apps that use it.",
   model: "That is not an FM-1, or the package is for another device.",
-  stopped: "The FM-1 stopped answering. Nothing was written: press Install again.",
-  lost: "The FM-1 was disconnected. Replug it and press Install again: it finishes what it started.",
-  noloader: "The update loader did not appear. Replug the USB cable and press Install again.",
+  stopped: "The FM-1 stopped answering. Nothing was written: hit INSTALL again.",
+  lost: "The FM-1 was unplugged. Plug it back in and hit INSTALL again: it finishes what it started.",
+  noloader: "The update loader did not show up. Replug the USB cable and hit INSTALL again.",
   noreturn: "Written, but the FM-1 did not come back. Switch it off and on.",
   mismatch: "Written, but the FM-1 reports another firmware",
-  badreq: "The FM-1 asked for something outside the package. Download the page again.",
+  badreq: "The FM-1 asked for something outside the package. Reload the page.",
 };
 
 async function load(raw, label) {
@@ -180,21 +288,22 @@ async function load(raw, label) {
   }
 }
 
-async function step(k, a) {
-  if (k === "start") { say(`Starting the update on ${a}…`); bar(2); log(`device ${a}`); }
-  else if (k === "verify") { say("Checking the package on the FM-1…"); bar(2 + Math.min(8, a / 4)); }
+function step(k, a) {
+  if (k === "start") { say(`Cueing up ${a}…`); bar(2); log(`device ${a}`); }
+  else if (k === "verify") { say("The FM-1 is checking the package…"); bar(2 + Math.min(8, a / 4)); }
   else if (k === "loader") { say("Switching to update mode…"); bar(12); log("loader"); }
   else if (k === "write") {
     const p = pkg ? Math.min(99, Math.round((a * 512) / pkg.image.length * 100)) : 50;
-    say(`Writing… ${p}%`); bar(12 + p * 0.85);
+    say(`Cutting the record… ${p}%`); bar(12 + p * 0.85);
   }
   else if (k === "reboot") { say("Restarting…"); bar(98); log("reboot"); }
-  else if (k === "done") { say(`Done: the FM-1 runs ${a}. Press PLAY, then ARP.`, "ok"); bar(100); log(`done ${a}`); }
+  else if (k === "done") { say(`Done. The FM-1 runs ${a}. Hit PLAY, then ARP.`, "ok"); bar(100); deck?.done(); log(`done ${a}`); }
 }
 
 async function install(resume = false) {
   if (!pkg || busy) return;
   busy = true; $("go").disabled = true; bar(0);
+  if (deck && !resume && !deck.soundOn && $("snd").dataset.muted !== "1") setSound(true);   // the cuts play while it flashes
   try {
     const midi = await navigator.requestMIDIAccess({ sysex: true });
     const up = new Updater(midi, log);
@@ -204,26 +313,54 @@ async function install(resume = false) {
   } catch (e) {
     if (e.code === "reload") {                  // Chrome on Linux: the loader's input only shows on a new page
       try { sessionStorage.setItem("nm-resume", pkg.label); } catch (_) {}
-      say("Reloading to reach the update loader…", "warn");
+      say("Reloading to reach the update loader…");
       setTimeout(() => location.reload(), 600);
       return;
     }
     if (e.name === "SecurityError" || e.name === "NotAllowedError") say("MIDI access was refused. Allow it (with SysEx) and try again.", "err");
     else say((ERR[e.code] || e.message) + (e.code === "mismatch" ? `: ${e.detail}` : ""), "err");
     log(`error ${e.code || e.name}: ${e.message}`);
+    bar(0);
+    deck?.error();
   } finally {
     busy = false;
     $("go").disabled = !pkg;
   }
 }
 
+async function setSound(on) {
+  if (!deck) return;
+  await deck.sound(on);
+  $("snd").setAttribute("aria-pressed", on);
+  $("snd").innerHTML = on ? "&#9632; kill the cuts" : "&#9654; hear the cuts";
+}
+
 $("go").addEventListener("click", () => install(false));
+$("snd").addEventListener("click", () => {
+  const on = !deck.soundOn;
+  $("snd").dataset.muted = on ? "0" : "1";
+  setSound(on);
+});
 $("file").addEventListener("change", async (ev) => {
   const f = ev.target.files[0];
   if (!f) return;
   await load(new Uint8Array(await f.arrayBuffer()), f.name);
-  $("filemeta").textContent = pkg ? "ready: press Install" : "";
+  $("filemeta").textContent = pkg ? "ready: hit INSTALL" : "";
 });
+
+// the turntable is decoration: the installer works without WebGL, three.js or the track
+import("./deck.js")
+  .then((m) => m.startDeck($("deck"), { base: "head/", track: TRACK }))
+  .then((d) => {
+    deck = d; $("snd").hidden = false;
+    const demo = new URLSearchParams(location.search).get("demo");   // ?demo: a pretend install, no MIDI; ?demo=0.6 holds there
+    if (demo !== null) {
+      if (demo) { bar(+demo * 100); deck.snap(); return; }
+      let p = 0;
+      const tick = setInterval(() => { p += 0.6; bar(p); if (p >= 100) { clearInterval(tick); deck.done(); } }, 120);
+    }
+  })
+  .catch((e) => console.warn("deck:", e));
 
 if (!navigator.requestMIDIAccess) $("nomidi").hidden = false;
 try {
