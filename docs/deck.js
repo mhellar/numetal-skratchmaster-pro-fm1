@@ -9,7 +9,7 @@ const W = 512;                                  // waveform texture: row 0 = 23 
 const ENV_HZ = 200;
 
 const VERT = /* glsl */ `
-uniform float uTime, uMorph, uAmp, uKick, uSpin;
+uniform float uTime, uMorph, uAmp, uKick, uSpin, uTilt;
 uniform sampler2D uWave;
 attribute float cang;
 varying vec2 vUv;
@@ -28,10 +28,10 @@ void main() {
 
   // HEAD: the skin ripples with the scratch, slices slip on the transients
   float w = wave(fract(h + uTime * 0.05));
-  vec3 head = p + normal * w * (0.025 + uAmp * 0.2);
+  vec3 head = p + normal * w * (0.008 + uAmp * 0.06);
   float band = floor(p.y * 16.0) + floor(uTime * 10.0);
   float r = hash(band);
-  head.x += step(0.86, r) * (r - 0.93) * (0.25 + uKick * 2.5);
+  head.x += step(0.94, r) * (r - 0.97) * uKick * 2.0;
 
   // RECORD: crown on the spindle, neck at the edge, the track cut into a spiral groove
   float raw = atan(p.x, p.z);
@@ -40,14 +40,14 @@ void main() {
   float turns = 9.0;
   float spiral = (rad - 0.16) / 1.05 * turns - a / 6.2831853;
   float cut = wave(fract(spiral * 0.41)) * (0.25 + env(fract(spiral / turns)));
-  vec3 disc = vec3(cos(a + uSpin) * rad, cut * (0.03 + uAmp * 0.16), sin(a + uSpin) * rad);
-  disc = rotX(disc, 1.08);
+  vec3 disc = vec3(cos(a + uSpin) * rad, cut * (0.006 + uAmp * 0.03), sin(a + uSpin) * rad);
+  disc = rotX(disc, uTilt);
 
   // the morph peels from the crown down, twisting on the way
   float m = smoothstep(0.0, 1.0, clamp(uMorph * 1.7 - (1.0 - h) * 0.7, 0.0, 1.0));
   vec3 q = mix(head, disc, m);
   q = rotY(q, m * (1.0 - m) * 6.0 * (h - 0.5));
-  q += normal * m * (1.0 - m) * (0.15 + uKick * 0.9);
+  q += normal * m * (1.0 - m) * (0.1 + uKick * 0.5);
 
   vUv = uv; vM = m; vRad = rad; vGroove = spiral; vH = h;
   vec4 mv = modelViewMatrix * vec4(q, 1.0);
@@ -84,9 +84,6 @@ void main() {
   float sheen = pow(max(dot(rf, L), 0.0), 10.0);
   float line = abs(fract(vGroove) - 0.5);
   vec3 vin = vec3(0.05) + sheen * 0.6 + (1.0 - smoothstep(0.0, 0.12, line)) * (0.1 + uAmp * 0.35) * mix(rust, bone, 0.35);
-  float lab = 1.0 - smoothstep(0.4, 0.42, vRad);
-  vin = mix(vin, mix(rust, bone, step(0.36, vRad) * 0.6) * (0.55 + diff * 0.5), lab);
-  vin = mix(vin, ink, 1.0 - smoothstep(0.035, 0.045, vRad - 0.16));
 
   vec3 c = mix(headc, vin, vM);
   c = mix(c, rust, uErr * 0.65);
@@ -146,6 +143,95 @@ async function loadHead(base) {
   return out;
 }
 
+const TILT = 0.92;                              // the record plane, tipped toward the camera (the shader uses it too)
+
+function canvasTex(w, h, draw) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  draw(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+// a silver direct-drive deck in the record's plane (y = up out of the record): plinth, strobe-dotted platter,
+// slipmat, pitch fader, start/stop, and a tonearm that plays the progress inward
+async function turntable() {
+  try { await Promise.race([Promise.all(["Anton", "Permanent Marker", "Special Elite"].map((f) => document.fonts.load(`40px "${f}"`))),
+                            new Promise((r) => setTimeout(r, 2500))]); } catch (_) {}
+  const group = new THREE.Group();
+  const deck = new THREE.Group();
+  deck.rotation.x = TILT;
+  group.add(deck);
+  const silver = new THREE.MeshStandardMaterial({ color: 0xa29f97, metalness: 0.8, roughness: 0.32 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x151413, metalness: 0.3, roughness: 0.55 });
+  const felt = new THREE.MeshStandardMaterial({ color: 0x0c0b0a, roughness: 1 });
+  const add = (geo, mat, x, y, z, parent = deck) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
+
+  add(new THREE.BoxGeometry(3.7, 0.24, 2.9), silver, 0.33, -0.27, 0.05);
+  add(new THREE.BoxGeometry(3.66, 0.012, 2.86), new THREE.MeshStandardMaterial({ color: 0x5c5954, metalness: 0.7, roughness: 0.45 }),
+      0.33, -0.146, 0.05);                                                             // the top plate
+  const strobe = canvasTex(2048, 64, (g, w, h) => {
+    g.fillStyle = "#b9b6ae"; g.fillRect(0, 0, w, h);
+    g.fillStyle = "#2a2826";
+    [180, 183, 186, 190].forEach((n, row) => {
+      for (let i = 0; i < n; i++) g.fillRect((i / n) * w, 6 + row * 14, w / n * 0.5, 8);
+    });
+  });
+  add(new THREE.CylinderGeometry(1.3, 1.3, 0.1, 128, 1, false),
+      [new THREE.MeshStandardMaterial({ map: strobe, metalness: 0.75, roughness: 0.3 }), dark, dark], 0, -0.09, 0);
+  add(new THREE.CylinderGeometry(1.26, 1.26, 0.012, 96), felt, 0, -0.034, 0);
+  add(new THREE.CylinderGeometry(0.025, 0.025, 0.12, 16), silver, 0, 0.03, 0);         // spindle
+  add(new THREE.BoxGeometry(0.34, 0.05, 0.24), silver, -1.22, -0.13, 1.22);            // start / stop
+  add(new THREE.BoxGeometry(0.1, 0.01, 1.0), dark, 1.88, -0.138, 0.78);                // pitch slot
+  add(new THREE.BoxGeometry(0.2, 0.07, 0.12), silver, 1.88, -0.11, 0.62);              // pitch knob
+  add(new THREE.CylinderGeometry(0.22, 0.24, 0.12, 48), silver, 1.6, -0.08, -0.95);    // arm base
+
+  // the record label, a separate disc so it stays sharp; it turns with the record
+  const labelSpin = new THREE.Group();
+  labelSpin.position.y = 0.04;
+  deck.add(labelSpin);
+  const labelMat = new THREE.MeshStandardMaterial({ roughness: 0.8, transparent: true, opacity: 0,
+    map: canvasTex(512, 512, (g, w) => {
+      const c = w / 2;
+      g.fillStyle = "#c0321d"; g.beginPath(); g.arc(c, c, c, 0, 7); g.fill();
+      g.strokeStyle = "#ebe4d2"; g.lineWidth = 6; g.beginPath(); g.arc(c, c, c - 16, 0, 7); g.stroke();
+      g.textAlign = "center"; g.fillStyle = "#ebe4d2";
+      g.font = '96px "Anton", Impact, sans-serif'; g.fillText("NU//METAL", c, 168);
+      g.fillStyle = "#0f0e0c"; g.font = '50px "Permanent Marker", cursive'; g.fillText("Skratchmaster", c, 222);
+      g.fillStyle = "#ebe4d2"; g.font = '26px "Special Elite", monospace';
+      g.fillText("PRO · SIDE A · 33⅓", c, 352);
+      g.fillText("FM-1_926", c, 390);
+      g.fillStyle = "#0f0e0c"; g.beginPath(); g.arc(c, c, 16, 0, 7); g.fill();
+    }) });
+  const label = add(new THREE.CircleGeometry(0.42, 96), labelMat, 0, 0, 0, labelSpin);
+  label.rotation.x = -Math.PI / 2;
+
+  // tonearm: yaw on the base, lift at the pivot; built along +x from the pivot
+  const PIV = new THREE.Vector2(1.6, -0.95), L = 1.75;
+  const yaw = new THREE.Group();
+  yaw.position.set(PIV.x, 0.17, PIV.y);
+  deck.add(yaw);
+  const lift = new THREE.Group();
+  yaw.add(lift);
+  const tube = add(new THREE.CylinderGeometry(0.028, 0.028, L, 16), silver, L / 2, 0, 0, lift);
+  tube.rotation.z = Math.PI / 2;
+  const cw = add(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 32), dark, -0.36, 0, 0, lift);
+  cw.rotation.z = Math.PI / 2;
+  add(new THREE.SphereGeometry(0.07, 24, 12), silver, 0, 0, 0, lift);
+  add(new THREE.BoxGeometry(0.26, 0.035, 0.13), dark, L + 0.06, -0.04, 0, lift);       // headshell
+  add(new THREE.CylinderGeometry(0.006, 0.002, 0.11, 8), silver, L + 0.08, -0.1, 0, lift);   // stylus
+
+  const D = PIV.length(), toCenter = Math.atan2(-PIV.y, -PIV.x);
+  const setArm = (r, up) => {                      // the stylus over radius r of the record, lifted by `up` (0..1)
+    const c = Math.max(-1, Math.min(1, (D * D + L * L - r * r) / (2 * D * L)));
+    yaw.rotation.y = -(toCenter - Math.acos(c));
+    lift.rotation.z = up * 0.16;
+  };
+  return { group, labelSpin, labelMat, setArm };
+}
+
 async function loadTrack(ctx, url) {
   const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
   const a = buf.getChannelData(0), b = buf.numberOfChannels > 1 ? buf.getChannelData(1) : a;
@@ -187,22 +273,36 @@ export async function startDeck(canvas, { base = "", track }) {
     uTime: { value: 0 }, uMorph: { value: 0 }, uAmp: { value: 0 }, uKick: { value: 0 }, uSpin: { value: 0 },
     uErr: { value: 0 }, uDots: { value: 4 * renderer.getPixelRatio() }, uWave: { value: waveTex }, uTex: { value: tex },
   };
+  U.uTilt = { value: TILT };
   const mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: U, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, mat);
-  scene.add(mesh);
+  const root = new THREE.Group();
+  root.add(mesh);
+  scene.add(root);
+  scene.add(new THREE.HemisphereLight(0xf2ead8, 0x1a1410, 1.1));
+  const key = new THREE.DirectionalLight(0xffffff, 2.4);
+  key.position.set(-3, 5, 4);
+  scene.add(key);
+  const back = new THREE.DirectionalLight(0xc0321d, 1.6);
+  back.position.set(3, 2, -4);
+  scene.add(back);
+  const tt = await turntable();
+  root.add(tt.group);
 
   const fit = () => {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.position.z = w / h < 1 ? 5.6 / Math.max(0.62, w / h) : 5.6;
-    mesh.position.set(w / h > 1.15 ? 0.95 : 0, w / h > 1.15 ? 0.12 : 0.35, 0);   // wide: beside the title
+    const wide = w / h > 1.15;
+    root.position.set(wide ? 0.82 : 0.05, wide ? 0.3 : 0.5, 0);   // wide: beside the title
+    root.scale.setScalar(wide ? 0.62 : 0.58);
     camera.updateProjectionMatrix();
   };
   new ResizeObserver(fit).observe(canvas);
   fit();
 
-  let target = 0, morph = 0, err = 0, amp = 0, slow = 0, spin = 0, dir = 1, fast = 0;
+  let target = 0, morph = 0, err = 0, amp = 0, slow = 0, spin = 0, dir = 1, fast = 0, up = 1, lifted = false, armR = 1.62;
   let src = null, gain = null, t0 = 0, wallStart = performance.now() / 1000, offset = 0;
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -231,11 +331,11 @@ export async function startDeck(canvas, { base = "", track }) {
         src.stop(); src.disconnect(); src = null;
       }
     },
-    progress(p) { target = Math.max(0, Math.min(1, p)); err = 0; },
-    done() { target = 1; fast = 1; },
-    error() { target = 0; err = 1; },
-    reset() { target = 0; },
-    snap() { morph = target; },
+    progress(p) { target = Math.max(0, Math.min(1, p)); err = 0; lifted = false; },
+    done() { target = 1; fast = 1; lifted = true; },
+    error() { target = 0; err = 1; lifted = false; },
+    reset() { target = 0; lifted = false; },
+    snap() { morph = target; up = 0; armR = 1.14 - 0.7 * Math.max(0, Math.min(1, (target - 0.3) / 0.67)); },
   };
 
   let last = performance.now();
@@ -260,20 +360,29 @@ export async function startDeck(canvas, { base = "", track }) {
     slow += (e - slow) * 0.03;
     const kick = Math.max(0, amp - slow * 1.15) * (calm ? 0.3 : 1);
     if (kick > 0.25 && Math.random() < 0.2) dir = -dir;     // the hand on the record: back and forth on the cuts
-    spin += dt * (0.6 + fast * 5 + kick * 9 * dir);
-    fast *= 0.995;
-
     morph += (target - morph) * Math.min(1, dt * 2.2);
     err *= Math.pow(0.4, dt);
-    const idle = target === 0 ? 0.06 + 0.06 * Math.sin(now / 2300) : 0;   // it dreams of the record
+    // the first 30 % turns the head into a record on a rising turntable; the rest, the needle plays it inward
+    const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const rec = sm(0.02, 0.3, morph), rise = sm(0, 0.24, morph), play = sm(0.3, 0.97, morph);
+    spin += dt * (rec * 3.49 + (1 - rec) * 0.6 + fast * 8 + kick * 9 * dir * rec);   // 33 1/3 rpm, and the cuts
+    fast *= Math.pow(0.6, dt);
+    tt.group.position.y = -4.5 * (1 - rise) * (1 - rise);
+    tt.group.visible = rise > 0.001;
+    tt.labelSpin.rotation.y = -spin;
+    tt.labelMat.opacity = sm(0.85, 1, rec);
+    up += ((rec > 0.97 && !lifted ? 0 : 1) - up) * Math.min(1, dt * 3);                // drop the needle
+    armR += ((rec > 0.97 ? 1.14 - 0.7 * play : 1.62) - armR) * Math.min(1, dt * 2.5);   // swing over, then inward
+    tt.setArm(armR, up);
     U.uTime.value = now / 1000;
-    U.uMorph.value = Math.max(morph, idle);
+    U.uMorph.value = rec;
     U.uAmp.value = amp;
     U.uKick.value = kick;
     U.uSpin.value = spin;
     U.uErr.value = err;
-    mesh.rotation.y = Math.sin(now / 2600) * 0.5 * (1 - morph);
-    mesh.rotation.z = (calm ? 0 : kick * 0.06) * dir;
+    mesh.rotation.y = Math.sin(now / 2600) * 0.5 * (1 - rec);
+    mesh.scale.setScalar(1 + 0.3 * (1 - rec));                                      // a big head, a record-sized record
+    mesh.rotation.z = (calm ? 0 : kick * 0.04) * dir * (1 - rec);
     renderer.render(scene, camera);
   });
   return deck;
