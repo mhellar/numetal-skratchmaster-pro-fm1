@@ -2,7 +2,7 @@
 
 # NU//METAL SKRATCHMASTER PRO
 
-**A robot turntablist with a nu metal band, for the M-VAVE FM-1. Version 2.0: the PRO edition.**
+**A robot turntablist with a nu metal band, for the M-VAVE FM-1. Version 2.1: the PRO edition.**
 
 The FM-1 becomes a deck. SAM (the 1982 Software Automatic Mouth) says 27 words onto a virtual record, and you scratch
 them with the keys and the jog wheel. Behind you a drop-tuned band plays: double-tracked chugging guitars, a bass and
@@ -22,6 +22,9 @@ PRO adds what a turntablist expects from a real setup:
 - **A bigger sound engine**: a vocal chain, double-tracked guitars, a stereo plate reverb, a glue compressor and a
   soft limiter
 - **A MIXER page** with faders and live meters
+- **An 808 kit and a drop-B guitar as real samples** (new in 2.1), rendered offline in floating point
+- **MIDI for drummers and visuals** (new in 2.1): play the kit from an e-kit on the TRS input, and every drum and the
+  deck itself come out on USB-MIDI
 
 <p align="center">
 <img src="docs/img/scratch-score.png" width="240" alt="Scratching TRANSFORM: the technique's score on screen with a playhead">
@@ -31,7 +34,7 @@ PRO adds what a turntablist expects from a real setup:
 
 <p align="center"><img src="docs/scratch.gif" width="480" alt="Scratching BREAK IT DOWN on the FM-1"></p>
 
-> **Status: 2.0, runs on the FM-1.** Identity `FM-1_926`, the same as NU//METAL SKRATCHMASTER 1.0: it installs over it.
+> **Status: 2.1, runs on the FM-1.** Identity `FM-1_926`, the same as NU//METAL SKRATCHMASTER 1.0: it installs over it.
 > Installing firmware is at your own risk; M-VAVE's official firmware can be reinstalled at any time.
 
 ## Install
@@ -39,12 +42,26 @@ PRO adds what a turntablist expects from a real setup:
 - **In the browser:** open the **[web installer](https://mhellar.github.io/numetal-skratchmaster-pro-fm1/)** in Chrome
   or Edge on a computer, plug the FM-1 in with a USB data cable, press **Install**. It uses Web MIDI, and nothing
   else needs to be installed.
-- **From the command line:** download `numetal-pro-2.0.fwsc` from [Releases](../../releases) (or
-  [docs/firmware](docs/firmware)), then `python3 tools/fm1_install.py numetal-pro-2.0.fwsc`
+- **From the command line:** download `numetal-pro-2.1.fwsc` from [Releases](../../releases) (or
+  [docs/firmware](docs/firmware)), then `python3 tools/fm1_install.py numetal-pro-2.1.fwsc`
   (needs `pip3 install mido python-rtmidi`).
 - **Rescue:** hold **OCT-** while switching on. No sound, only the updater. Install anything from there.
 
-The first start of 2.0 sets everything to defaults: the saved settings grew.
+Coming from 1.0, the first start sets everything to defaults (the saved settings grew in 2.0). 2.1 keeps 2.0's
+settings.
+
+### What's new in 2.1
+
+- **TRS MIDI IN** works: plug an e-kit (the map is set up for a Roland TD-8) or any MIDI gear into the FM-1's TRS
+  jack. Channel 10 uses the General MIDI drum map, and hits that land together (kick + crash) play together.
+- **MIDI out for visuals:** every drum the FM-1 plays (the band, the pads, the e-kit) goes out on USB-MIDI as a GM note
+  on channel 10, and the deck sends CC 20 (scratching 0/127), CC 21 (crossfader) and CC 22 (platter angle) on channel 1.
+- **The 808 kit:** kick, snare, clap, toms and a long saturated 808 bass, with the hats' and cymbals' aliasing fizz
+  filtered out.
+- **The guitar** is a drop-B take (plucked strings into an oversampled two-stage amp, tone stack and 4x12 cab),
+  double-tracked left and right. The kit and the guitar are 16-bit samples played at TUNE pitch; DECAY 0/1 shortens
+  them.
+- The audio load stays about 20 % at peak with the kit hammered.
 
 ## Play
 
@@ -129,12 +146,13 @@ DJ mode. The LFO on PITCH gives vibrato, and the LFO on FADER with SQUARE gives 
 - **Vocals:** the post chain filters the 8-bit record's fizz, adds body under 250 Hz, then a fast compressor puts
   the voice in front. An exciter adds air, and a doubler makes it wide while staying mono-safe (the copy sits only in
   the side).
-- **Guitars:** double-tracked, two takes hard left and right. The second take is a few cents off and a few
-  milliseconds late.
+- **Guitars:** a drop-B take rendered offline (plucked strings, an oversampled two-stage amp, a tone stack and a 4x12
+  cab), double-tracked hard left and right. The right side is a few cents up and about 11 ms late.
+- **Drums:** an 808 kit, rendered offline as 16-bit samples.
 - **Space:** a stereo plate reverb holds the vocals, snare, claps, toms and the echo, and the RAP hook gets a reverb
   throw.
 - **Master:** the bus runs into a glue compressor and a soft limiter, never a hard clip.
-- **Load:** hold EDIT to see the audio load; about 30 % with everything going.
+- **Load:** hold EDIT to see the audio load; about 20 % at peak with the kit hammered.
 
 ### The MIXER
 
@@ -149,7 +167,10 @@ pump the current FX instead, like a wah pedal.
 
 ### MIDI
 
-USB-MIDI channel 10, notes 36-47 = the kit; other channels, notes 48-74 = the 27 words. **SYNC FOLLOW** follows an
+**In** (USB or the TRS jack): channel 10 plays the kit on the General MIDI drum map (35 808, 36 kick, 37 rim, 38/40 snare, 39 clap, 42/44 hat,
+46 open hat, toms 41-50 + 58, 49/55/57 crash, 51/59 ride, 52 china, 53 zap); other channels, notes 48-74 = the 27 words.
+**Out** (USB): every drum played as a GM note on channel 10, and the deck on channel 1: CC 20 scratching (0/127), CC 21
+the crossfader, CC 22 the platter angle, sent on change. **SYNC FOLLOW** follows an
 incoming clock (USB or the TRS input), and Start / Stop / Continue drive PLAY. Send **CC 119** and it answers with
 CC 119 = the audio load in %.
 
@@ -166,6 +187,7 @@ git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
 
 tests/run_host.sh                           # on your computer: build/host/dinghy.wav + screen PNGs
 tests/run_pro.sh                            # the PRO scripts: techniques, tone play + LFO, the mixer (WAV + frames)
+python3 tools/render_kit.py                 # re-render the 808 kit + guitar into firmware/gen/kit_pcm.h (needs numpy, scipy)
 ./build.sh                                  # -> build/dinghy.fwsc
 ./build.sh --release 2.1                    # -> build/numetal-2.1.fwsc, "2.1" on the screen
 python3 tools/fm1_install.py build/dinghy.fwsc

@@ -314,28 +314,18 @@ static volatile uint8_t seq_flag[16], seq_skip[16];
 static volatile uint16_t seq_drum[16];
 
 /* =========================================================================== drums */
-enum { W_KICK, W_SNR, W_CLAP, W_HAT, W_CRASH, W_ZAP };
-typedef struct { const char *name; uint8_t wave, psh, dsh; uint32_t inc0, inc1; int16_t gain, noise, drive; } perc_t;
+/* the kit is played back, not synthesised: 16-bit PCM rendered offline (tools/render_kit.py -> gen/kit_pcm.h) */
+#include "kit_pcm.h"
+typedef struct { const char *name; const int16_t *pcm; uint32_t len, fs; int16_t gain; } perc_t;
+#define PCM(n) PCM_##n, sizeof PCM_##n / 2u, PCM_##n##_FS
 #define NDRUM 12
 static const perc_t PERC[NDRUM] = {
-    /* name     wave    psh dsh  inc0       inc1      gain   noise  drive(Q4) */
-    {"KICK",  W_KICK,  9, 11, 18504394u, 5064361u, 31000, 14000, 35},
-    {"SNARE", W_SNR,   9, 10, 20452225u, 16069606u, 22000, 26000, 32},
-    {"CLAP",  W_CLAP,  0, 10, 0, 0,                24000, 0,     26},
-    {"HAT",   W_HAT,   0, 8,  0, 0,                16000, 0,     0},
-    {"OPEN",  W_HAT,   0, 11, 0, 0,                14000, 0,     0},
-    {"RIM",   W_SNR,   7, 8,  79861070u, 62330591u, 20000, 11000, 26},
-    {"TOM-L", W_KICK,  10, 11, 17530479u, 10713070u, 25000, 6000, 22},
-    {"TOM-H", W_KICK,  10, 11, 29217465u, 18504394u, 23000, 6000, 22},
-    {"808",   W_KICK,  10, 13, 10713070u, 4869577u, 30000, 4000,  27},
-    {"CHINA", W_CRASH, 0, 11, 0, 0,                16000, 0,     0},
-    {"ZAP",   W_ZAP,   9, 10, 253218027u, 6817408u, 18000, 0,     0},
-    {"CRASH", W_CRASH, 0, 13, 0, 0,                13000, 0,     0},
+    {"KICK", PCM(KICK), 28000}, {"SNARE", PCM(SNARE), 21000}, {"CLAP", PCM(CLAP), 24000}, {"HAT", PCM(HAT), 5600},
+    {"OPEN", PCM(OPEN), 8400}, {"RIM", PCM(RIM), 13500}, {"TOM-L", PCM(TOML), 18000}, {"TOM-H", PCM(TOMH), 17200},
+    {"808", PCM(B808), 30000}, {"CHINA", PCM(CHINA), 6900}, {"ZAP", PCM(ZAP), 7600}, {"CRASH", PCM(CRASH), 8600},
 };
 enum { D_KICK, D_SNARE, D_CLAP, D_HAT, D_OPEN, D_RIM, D_TOML, D_TOMH, D_808, D_CHINA, D_ZAP, D_CRASH };
 #define HATS ((1u << D_HAT) | (1u << D_OPEN))
-static const uint32_t HAT_INC[6] = {31991176u, 47433580u, 57593466u, 81450500u, 84146298u, 124661182u};
-static const uint32_t CRASH_INC[6] = {19994485u, 29645987u, 35995916u, 50906562u, 52591436u, 77913239u};
 
 /* the riff: '.' nothing, '0'..'9' a palm-muted chug that many semitones over the tuning's root, 'A'..'K' an open
  * power chord (A = the root, B = a half step up, G = the tritone, H = the fifth). */
@@ -382,7 +372,7 @@ static struct {
     int32_t tsemi;                              /* TONE: the key's semitone */
     uint32_t tgate;                             /* TONE: the fader, open while a key is held */
 } dk = {-1, 0, 0, 0, 0, 0, 0, 0, 0, DK_OFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static struct { int32_t env, nenv; uint32_t ph, inc, inc1, step, t; int32_t z1, z2; } dr[NDRUM];
+static struct { int32_t env; uint32_t pos, inc, end; } dr[NDRUM];   /* pos, inc: Q16 samples of the PCM */
 static int16_t echo_buf[12288] POOL;            /* at 22050 Hz: 0.55 s */
 static uint32_t nrng = 0x13579BDFu;
 static uint32_t noise(void) { nrng = nrng * 1664525u + 1013904223u; return nrng; }
@@ -407,25 +397,24 @@ static const uint32_t INC_C9[12] = {            /* MIDI 120..131 (C9..B9); lower
     1153098554u, 1221665363u, 1294309365u, 1371273005u, 1452813141u, 1539201906u};
 static uint32_t inc_of(uint32_t note) { if (note > 131u) note = 131u; return INC_C9[note % 12u] >> (10u - note / 12u); }
 #define SAW(ph) ((int32_t)(ph) >> 16)           /* -32768..32767 */
-static struct {                                 /* the guitars, double-tracked: L = root fifth octave, R = the same a few cents off */
-    uint32_t inc[6], ph[6], next[3];            /* 0 2 3 = L, 1 4 5 = R; next: R's notes, once its pick lands */
-    int32_t env, envr, mute, lag;               /* R plays ~5 ms behind L: a second take */
+static struct {                                 /* the guitars, double-tracked from one PCM take: R ~11 ms late, a few cents up */
+    const int16_t *pcm[2]; uint32_t end[2], pos[2], inc[2], next;
+    int32_t env, envr, mute, lag;
 } gt;
 static struct { uint32_t inc, ph, sph; int32_t env, mute, lp; } bs;          /* the bass: a saw and a sub sine */
-
 static void band_hit(uint32_t rc, uint32_t guitar)   /* a riff step: rc '0'..'9' chug, 'A'.. open; the verse: bass only */
 {
     const uint32_t open = rc >= 'A', note = 29u + p_tune + (open ? rc - 'A' : rc - '0');   /* tune 6 = B1, drop B */
     const uint32_t root = inc_of(note);
     if (guitar) {
-        gt.inc[0] = root;
-        gt.inc[2] = inc_of(note + 7u) - (root >> 10);
-        gt.inc[3] = inc_of(note + 12u);
-        gt.next[0] = root + (root >> 9);        /* two guitars, a few cents apart */
-        gt.next[1] = inc_of(note + 7u) + (root >> 10);
-        gt.next[2] = inc_of(note + 12u) - (root >> 10);
+        const uint32_t r = (uint32_t)pitch_rate(PCM_GOPEN_FS * 65536 / 44100, ((int32_t)note - 35) << 8);   /* the take: B1 */
+        gt.pcm[0] = open ? PCM_GOPEN : PCM_GCHUG;
+        gt.end[0] = (open ? sizeof PCM_GOPEN / 2u : sizeof PCM_GCHUG / 2u) - 1u;
+        gt.end[0] <<= 16;
+        gt.pos[0] = 0; gt.inc[0] = r;
+        gt.next = r + (r >> 8);
         gt.env = 32767 << 8;
-        gt.lag = 220;
+        gt.lag = 480;
         gt.mute = !open;
     }
     bs.inc = root;
@@ -504,13 +493,9 @@ static void drum_hit(uint32_t d)
     const perc_t *p = &PERC[d];
     const uint32_t tune = (uint32_t)PITCH[p_tune + 6u];        /* -6..+6 semitones */
     dr[d].env = 32767 << 8;
-    dr[d].nenv = 32767 << 8;
-    dr[d].inc = mulq15(p->inc0, tune);
-    dr[d].inc1 = mulq15(p->inc1, tune);
-    dr[d].step = tune >> 7;                                     /* the metal's clock, Q8 */
-    if (d == D_CHINA) dr[d].step = dr[d].step * 3u / 2u;        /* the china: the crash's squares, higher and trashier */
-    dr[d].ph = 0;
-    dr[d].t = 0;
+    dr[d].pos = 0;
+    dr[d].inc = mulq15((p->fs << 16) / 44100u, tune);
+    dr[d].end = (p->len - 1u) << 16;
     if (d == D_HAT) dr[D_OPEN].env = 0;         /* the closed hat chokes the open one */
     drum_hit_v |= 1u << d;
 }
@@ -557,12 +542,12 @@ static void app_audio(int32_t *out, uint32_t n)
     static uint32_t G, gacc, stepn, restarted, cmd_seen, drum_seen, crush_h, ew, rot, half_done;
     static uint32_t spin_seen, brake_seen, braking, brake_g0, muted, slam, was_held, fill_n, frz_was;
     static uint32_t ext_seen, ext_start_seen, ext_wait;
-    static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y, dcz, wl, wb, ghp, gl1, gl2;
+    static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y, dcz, wl, wb;
     static uint32_t lfo_last, sh_new, sh_old, last_mode;
     static int32_t lfo_g = 32767, pan_s, blp, band_s = 32767, mot;
     static int32_t dbuf[64], vbuf[64], gbl[64], gbr[64], bbuf[64], wbuf[64];   /* drums, deck, guitars L R, bass, the wet drums */
     uint32_t pk[4] = {0, 0, 0, 0};
-    static int32_t va1, va2, vlo, vex, venv, vg = 32767, mg = 32767, menv, ghpr, gl1r, gl2r, blpr, rvl, rvr;
+    static int32_t va1, va2, vlo, vex, venv, vg = 32767, mg = 32767, menv, blpr, rvl, rvr;
     static uint32_t dbw, dph;
 #ifndef DINGHY_HOST
     const uint32_t t_in = fm1_ticks();
@@ -941,94 +926,51 @@ static void app_audio(int32_t *out, uint32_t n)
         for (d = 0; d < NDRUM; d++) {
             uint32_t wet;
             const perc_t *p = &PERC[d];
-            int32_t env = dr[d].env, nenv = dr[d].nenv, z1 = dr[d].z1, z2 = dr[d].z2, dsh;
-            uint32_t ph = dr[d].ph, inc = dr[d].inc, t = dr[d].t;
-            const uint32_t inc1 = dr[d].inc1, step = dr[d].step;
-            if (env < 512) continue;
-            dsh = (int32_t)p->dsh + (int32_t)p_decay - 2;
+            const int16_t *pc = p->pcm;
+            const uint32_t inc = dr[d].inc, end = dr[d].end, esh = p_decay >= 2u ? 0u : p_decay ? 12u : 10u;   /* DECAY: shorter */
+            int32_t env = dr[d].env;
+            uint32_t pos = dr[d].pos;
+            if (env < 512 || pos >= end) continue;
             wet = (1u << d) & WET_DRUMS;
-            for (i = 0; i < m; i++) {
-                int32_t s, nz = (int32_t)noise() >> 16, e;
-                switch (p->wave) {
-                case W_KICK:
-                    inc -= (inc - inc1) >> p->psh;
-                    ph += inc;
-                    s = sine(ph) + ((((nz * (nenv >> 8)) >> 15) * p->noise) >> 15);
-                    nenv -= nenv >> 7;
-                    break;
-                case W_SNR:
-                    inc -= (inc - inc1) >> p->psh;
-                    ph += inc;
-                    z1 += (nz - z1) >> 1;
-                    s = (sine(ph) * (32767 - p->noise) + z1 * p->noise) >> 15;
-                    break;
-                case W_CLAP:                                     /* three quick slaps, then the tail */
-                    if (t == 420u || t == 840u || t == 1260u) env = 32767 << 8;
-                    z1 += (nz - z1) >> 2;
-                    s = nz - z1;                                 /* the hiss above ~2 kHz */
-                    break;
-                case W_HAT: case W_CRASH: {                      /* the 808's six squares, high-passed */
-                    const uint32_t *f = p->wave == W_HAT ? HAT_INC : CRASH_INC;
-                    uint32_t k, tt;
-                    ph += step;
-                    tt = (ph >> 8) & 0xFFFFFu;
-                    s = 0;
-                    for (k = 0; k < 6u; k++) s += ((int32_t)((f[k] * tt) >> 31) ? 4096 : -4096);
-                    e = s - z1; z1 = s;
-                    s = e - z2; z2 = e;                          /* twice: only the sizzle stays */
-                    s = (s + (nz >> 2)) >> 1;
-                    break;
-                }
-                default:                                         /* W_ZAP */
-                    inc -= (inc - inc1) >> p->psh;
-                    ph += inc;
-                    s = sine(ph);
-                    break;
-                }
-                env -= env >> (p->wave == W_CLAP && t < 1300u ? 8 : dsh);
-                t++;
+            for (i = 0; i < m && pos < end; i++) {
+                const int32_t a = pc[pos >> 16], b = pc[(pos >> 16) + 1u];
+                int32_t s = a + (((b - a) * (int32_t)((pos >> 1) & 0x7FFFu)) >> 15);
+                pos += inc;
+                if (esh) env -= env >> esh;
                 s = (s * (env >> 8)) >> 15;
                 s = (s * p->gain) >> 15;
-                if (p->drive) s = soft((s * p->drive) >> 4);
                 dbuf[i] += s;
                 if (wet) wbuf[i] += s;
             }
-            dr[d].env = env; dr[d].nenv = nenv; dr[d].ph = ph; dr[d].inc = inc; dr[d].t = t; dr[d].z1 = z1; dr[d].z2 = z2;
+            dr[d].env = pos < end ? env : 0; dr[d].pos = pos;
         }
-        if (dr[D_KICK].env > (30000 << 8) || dr[D_808].env > (30000 << 8)) duck = 32767;
+        if ((dr[D_KICK].env && dr[D_KICK].pos < (240u << 16)) || (dr[D_808].env && dr[D_808].pos < (240u << 16))) duck = 32767;
 
-        /* ---- the band: two guitar takes (L, R), each high-pass, fuzz, a two-pole cab; the bass in the middle */
+        /* ---- the band: the guitar take L and R (PCM, amp and cab rendered in), the bass in the middle */
         for (i = 0; i < m; i++) gbl[i] = gbr[i] = bbuf[i] = 0;
         if (gt.lag > 0 && (gt.lag -= (int32_t)m) <= 0) {      /* the second take's pick lands */
-            gt.inc[1] = gt.next[0]; gt.inc[4] = gt.next[1]; gt.inc[5] = gt.next[2];
+            gt.pcm[1] = gt.pcm[0]; gt.end[1] = gt.end[0]; gt.pos[1] = 0; gt.inc[1] = gt.next;
             gt.envr = gt.env;
         }
         if (gt.env > 4096 || gt.envr > 4096 || bs.env > 4096) {
             const uint32_t bk = braking ? braking : 256u;       /* BRAKE: the band winds down with the turntable */
-            const uint32_t i0 = (gt.inc[0] >> 8) * bk, i1 = (gt.inc[1] >> 8) * bk, i2 = (gt.inc[2] >> 8) * bk;
-            const uint32_t i3 = (gt.inc[3] >> 8) * bk, i4 = (gt.inc[4] >> 8) * bk, i5 = (gt.inc[5] >> 8) * bk;
+            const uint32_t i0 = (gt.inc[0] >> 8) * bk, i1 = (gt.inc[1] >> 8) * bk;
             const uint32_t ib = (bs.inc >> 8) * bk;
-            const int32_t ta = gt.mute ? 5200 : 9500, gsh = gt.mute ? 11 : 15, bsh = bs.mute ? 11 : 14;
+            const int32_t gsh = gt.mute ? 13 : 15, bsh = bs.mute ? 11 : 14;
             for (i = 0; i < m; i++) {
                 int32_t xl = 0, xr = 0, b2;
-                if (gt.env > 4096) {                            /* L: three saws, high-pass, fuzz, a two-pole cab */
-                    gt.ph[0] += i0; gt.ph[2] += i2; gt.ph[3] += i3;
-                    xl = ((SAW(gt.ph[0]) + SAW(gt.ph[2]) + (SAW(gt.ph[3]) >> 1)) * 13) >> 5;
-                    ghp += ((xl - ghp) * 600) >> 15;            /* ~130 Hz: tight, no mud */
-                    xl = soft((xl - ghp) * 5);                  /* the fuzz */
-                    gl1 += ((xl - gl1) * ta) >> 15;             /* the cab; a palm mute is darker */
-                    gl2 += ((gl1 - gl2) * ta) >> 15;
-                    xl = (gl2 * (gt.env >> 8)) >> 15;
+                if (gt.env > 4096 && gt.pos[0] < gt.end[0]) {   /* L */
+                    const int16_t *g = gt.pcm[0] + (gt.pos[0] >> 16);
+                    xl = g[0] + (((g[1] - g[0]) * (int32_t)((gt.pos[0] >> 1) & 0x7FFFu)) >> 15);
+                    xl = (xl * (gt.env >> 8)) >> 14;              /* x 2: the take is clean, the old amp ran hot */
+                    gt.pos[0] += i0;
                     gt.env -= gt.env >> gsh;
                 }
-                if (gt.envr > 4096) {                           /* R: the second take */
-                    gt.ph[1] += i1; gt.ph[4] += i4; gt.ph[5] += i5;
-                    xr = ((SAW(gt.ph[1]) + SAW(gt.ph[4]) + (SAW(gt.ph[5]) >> 1)) * 13) >> 5;
-                    ghpr += ((xr - ghpr) * 600) >> 15;
-                    xr = soft((xr - ghpr) * 5);
-                    gl1r += ((xr - gl1r) * ta) >> 15;
-                    gl2r += ((gl1r - gl2r) * ta) >> 15;
-                    xr = (gl2r * (gt.envr >> 8)) >> 15;
+                if (gt.envr > 4096 && gt.pos[1] < gt.end[1]) {  /* R: the second take */
+                    const int16_t *g = gt.pcm[1] + (gt.pos[1] >> 16);
+                    xr = g[0] + (((g[1] - g[0]) * (int32_t)((gt.pos[1] >> 1) & 0x7FFFu)) >> 15);
+                    xr = (xr * (gt.envr >> 8)) >> 14;
+                    gt.pos[1] += i1;
                     gt.envr -= gt.envr >> gsh;
                 }
                 bs.ph += ib; bs.sph += ib >> 1;
@@ -1510,6 +1452,14 @@ static const char *const DROP_NAME[13] = {"F", "F#", "G", "G#", "A", "A#", "B", 
 static int32_t clampi(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 static void deck_cmd(uint32_t kind, uint32_t arg) { cmd_arg = arg; cmd_kind = kind; cmd_n++; }
 static void drums_now(uint32_t mask) { drum_mask = mask; drum_n++; }
+/* General MIDI drum notes 35..59 (channel 10) -> the pads, so an e-kit plays them (Roland TD-8 defaults:
+ * kick 36, snare 38 / rim 40, toms 48 45 43 41 (rims 50 47 58 39), hats 42 46 44, crash 49 / 57, ride 51 / bell 53) */
+static const int8_t GM_DRUM[25] = {
+    D_808, D_KICK, D_RIM, D_SNARE, D_CLAP, D_SNARE, D_TOML, D_HAT, D_TOML, D_HAT, D_TOML, D_OPEN, D_TOMH,  /* 35..47 */
+    D_TOMH, D_CRASH, D_TOMH, D_HAT, D_CHINA, D_ZAP, -1, D_CRASH, -1, D_CRASH, D_TOML, D_HAT              /* 48..59 */
+};
+/* ...and back: every drum the FM-1 plays (band, pads, e-kit) goes out on ch 10 as this GM note, for visuals and gear */
+static const uint8_t DRUM_GM[NDRUM] = {36, 38, 39, 42, 46, 37, 45, 48, 35, 52, 53, 49};
 static uint32_t lcg = 0x2468ACE1u;
 static uint32_t rnd(uint32_t n) { lcg = lcg * 1103515245u + 12345u; return (lcg >> 8) % n; }
 
@@ -1546,7 +1496,8 @@ static void app_main(void)
     uint32_t lfo_held = 0, lfo_turned = 0, t_lfo = 0, t_score = 0, last_word = AHH_WORD, tone_on = 0;
     uint32_t frz_latch = 0, knobs = 1, chips = 1, top_key = ~0u, t_draw = 0, steps_drawn = ~0u;
     uint32_t t_jog = 0, t_voice = 0, voice_pending = 0, t_toast = 0, toast_on = 0, deck_view = ~0u;
-    uint32_t t_down[27] = {0}, scr[27] = {0}, qstep[27] = {0}, hit_t[NDRUM] = {0}, taps[4] = {0}, ntap = 0;
+    uint32_t t_down[27] = {0}, scr[27] = {0}, qstep[27] = {0}, hit_t[NDRUM] = {0}, taps[4] = {0}, ntap = 0, dmask;
+    uint32_t t_cc = 0, cc_on = ~0u, cc_fd = ~0u, cc_an = ~0u;
     int32_t word_drawn = -2, held_word[27];
     char toast[24];
     int32_t jog_v = 0, fx_boost = 0, last_tap_w = -1, boost_shown = 0;
@@ -1840,7 +1791,6 @@ static void app_main(void)
                     t_down[k] = now; scr[k] = 0; qstep[k] = q;
                     if (dr_i >= 0) {
                         drums_now(1u << dr_i);
-                        out_msg(0x99, 36u + (uint32_t)dr_i, 110);
                         if (rec && play) { seq_drum[q] |= (uint16_t)(1u << dr_i); if (late) seq_skip[q] = 1; dirty = 1; }
                     } else {
                         const uint32_t gap = now - t_tap;
@@ -1887,7 +1837,8 @@ static void app_main(void)
             }
             p_roll = roll;
         }
-        while (midi_get(&st, &d1, &d2)) {       /* USB-MIDI in */
+        dmask = 0;
+        while (midi_get(&st, &d1, &d2)) {       /* USB-MIDI and TRS MIDI IN */
             if (st >= 0xF8u) {                  /* clock and transport */
                 if (set.sync != 0u) continue;   /* OFF: ignored */
                 if (st == 0xF8u) {
@@ -1908,9 +1859,10 @@ static void app_main(void)
             }
             if ((st & 0xF0u) == 0xB0u && d1 == 119u) { out_msg(0xB0, 119, load_v > 127u ? 127u : load_v); continue; }   /* CC 119: the load, asked */
             if ((st & 0xF0u) != 0x90u || !d2) continue;
-            if ((st & 0x0Fu) == 9u) { if (d1 >= 36u && d1 < 48u) drums_now(1u << (d1 - 36u)); }
+            if ((st & 0x0Fu) == 9u) { if (d1 >= 35u && d1 < 60u && GM_DRUM[d1 - 35u] >= 0) dmask |= 1u << GM_DRUM[d1 - 35u]; }
             else if (d1 >= 48u && d1 < 48u + NKEYW) deck_cmd(CMD_SAY, d1 - 48u);
         }
+        if (dmask) drums_now(dmask);            /* hits in one pass land together (kick + crash) */
 
         /* ---- a new voice: speak the bank again once the knob rests */
         if (voice_pending && now - t_voice > 700u) {
@@ -1921,11 +1873,20 @@ static void app_main(void)
             deck_cmd(CMD_SAY, NAME_WORD);
         }
 
+        /* ---- the deck out to USB-MIDI for visuals, on change, ~66 Hz: CC 20 scratching, 21 fader, 22 platter angle */
+        if (now - t_cc >= 15u) {
+            const uint32_t on = dk_on_v ? 127u : 0u, fd = dk_fader_v >> 8, an = dk_rot_v >> 25;
+            t_cc = now;
+            if (on != cc_on) { cc_on = on; out_msg(0xB0, 20, on); }
+            if (fd != cc_fd) { cc_fd = fd; out_msg(0xB0, 21, fd); }
+            if (an != cc_an) { cc_an = an; out_msg(0xB0, 22, an); }
+        }
+
         /* ---- LEDs */
         {
             uint32_t h = drum_hit_v, lit;
             drum_hit_v = 0;
-            for (k = 0; k < NDRUM; k++) if (h >> k & 1u) hit_t[k] = now;
+            for (k = 0; k < NDRUM; k++) if (h >> k & 1u) { hit_t[k] = now; out_msg(0x99, DRUM_GM[k], 110); out_msg(0x89, DRUM_GM[k], 0); }
             for (k = 0; k < 27u; k++) {
                 lit = keys >> k & 1u;
                 if (set.beat == M_TONE) {}

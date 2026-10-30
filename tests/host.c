@@ -74,6 +74,7 @@ static int settings_save(const void *p, uint32_t n)
 }
 
 static uint8_t mq[64][3];
+static uint8_t midi_trs = 1;                    /* script MIDI stands in for the TRS jack */
 static uint32_t mq_w, mq_r;
 static int midi_get(uint8_t *st, uint8_t *d1, uint8_t *d2)
 {

@@ -142,7 +142,7 @@
   <div class="readout" id="readout">FM-1 CUSTOM FIRMWARE &middot; <b>SIDE A</b></div>
   <button class="snd" id="snd" aria-pressed="false" hidden>&#9654; hear the cuts</button>
   <div class="over">
-    <p class="kicker">for the M-VAVE FM-1 &middot; v<span id="ver">2.0</span> &middot; GPL-3</p>
+    <p class="kicker">for the M-VAVE FM-1 &middot; v<span id="ver">2.1</span> &middot; GPL-3</p>
     <h1><span class="nu">NU//METAL</span><span class="sk">Skratchmaster</span><span class="stamp">PRO</span></h1>
     <p class="sub">A robot turntablist and a drop-tuned band in a pocket synth. Plug it in, drop the needle, flash it from this page.</p>
   </div>
@@ -243,7 +243,7 @@
 import { Updater } from "./fm1ota.js";
 import { readPackage } from "./fwsc.js";
 
-const FIRMWARE = "firmware/numetal-pro-2.0.fwsc";     // a new release: put it in docs/firmware/ and change this
+const FIRMWARE = "firmware/numetal-pro-2.1.fwsc";     // a new release: put it in docs/firmware/ and change this
 const TRACK = "audio/scratch-techniques.mp3";          // tests/pro_techniques.txt through the host build
 const $ = (id) => document.getElementById(id);
 let pkg = null, busy = false, deck = null;
