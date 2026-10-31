@@ -2,11 +2,12 @@
 
 # NU//METAL SKRATCHMASTER PRO
 
-**A robot turntablist with a nu metal band, for the M-VAVE FM-1. Version 2.1: the PRO edition.**
+**A robot turntablist with a nu metal band, for the M-VAVE FM-1. Version 3.0: INFINITE SKRATCH.**
 
 The FM-1 becomes a deck. SAM (the 1982 Software Automatic Mouth) says 27 words onto a virtual record, and you scratch
-them with the keys and the jog wheel. Behind you a drop-tuned band plays: double-tracked chugging guitars, a bass and
-a 12-piece kit locked to ten grooves. In **RAP MODE** the robot is the MC: four bars of verse, where it raps rhyming
+them with the keys and the jog wheel. Or surf an endless record that is generated as you scratch it (SURF mode, new
+in 3.0). Behind you a drop-tuned band plays: double-tracked 7-string guitars, a bass and a 12-piece kit locked to
+twelve grooves. In **RAP MODE** the robot is the MC: four bars of verse, where it raps rhyming
 lines that fit the beat, then four bars of hook, where the guitars come in and it shouts the hook in a Melvins-style
 **GROWL**.
 
@@ -34,7 +35,7 @@ PRO adds what a turntablist expects from a real setup:
 
 <p align="center"><img src="docs/scratch.gif" width="480" alt="Scratching BREAK IT DOWN on the FM-1"></p>
 
-> **Status: 2.1, runs on the FM-1.** Identity `FM-1_926`, the same as NU//METAL SKRATCHMASTER 1.0: it installs over it.
+> **Status: 3.0, runs on the FM-1.** Identity `FM-1_926`, the same as NU//METAL SKRATCHMASTER 1.0: it installs over it.
 > Installing firmware is at your own risk; M-VAVE's official firmware can be reinstalled at any time.
 
 ## Install
@@ -42,13 +43,64 @@ PRO adds what a turntablist expects from a real setup:
 - **In the browser:** open the **[web installer](https://mhellar.github.io/numetal-skratchmaster-pro-fm1/)** in Chrome
   or Edge on a computer, plug the FM-1 in with a USB data cable, press **Install**. It uses Web MIDI, and nothing
   else needs to be installed.
-- **From the command line:** download `numetal-pro-2.1.fwsc` from [Releases](../../releases) (or
-  [docs/firmware](docs/firmware)), then `python3 tools/fm1_install.py numetal-pro-2.1.fwsc`
+- **From the command line:** download `numetal-pro-3.0.fwsc` from [docs/firmware](docs/firmware), then
+  `python3 tools/fm1_install.py numetal-pro-3.0.fwsc`
   (needs `pip3 install mido python-rtmidi`).
 - **Rescue:** hold **OCT-** while switching on. No sound, only the updater. Install anything from there.
 
 Coming from 1.0, the first start sets everything to defaults (the saved settings grew in 2.0). 2.1 keeps 2.0's
-settings.
+settings. 3.0 keeps 2.x settings and sets the tuning to A once.
+
+### What's new in 3.0: INFINITE SKRATCH
+
+**SURF mode** (press HOME until the chip says SURF) puts an endless record on the deck. It is never stored. Every
+stretch is computed from where it is on the record and from the WORLD, so scratching back over a spot plays the same
+sound again, just like vinyl. The record is cut into zones of 0.74 s. Each one is a sample on a battle record with an
+attack, a body and a gap of crackle, and each is made in one of seven ways:
+
+| Material | What it is |
+| --- | --- |
+| **AHHH** | a vowel built from FOF grains (a pulse every pitch period, three formants ringing off it), gliding, morphing a to o |
+| **CHIRP** | a tone sweeping octaves, or a LASER where the sweep repeats; sine, fat square, saw or sine + octave |
+| **FM** | two operators, the index decaying, rising or wobbling: bells, screeches |
+| **BYTE** | a bytebeat formula (`t*(t>>a\|t>>b)` and friends) read at the record's speed: 8-bit shrapnel |
+| **DUST** | the SAM words shattered into grains, re-pitched, some backwards, two streams overlapped |
+| **CHAOS** | the logistic map with r swept through its bifurcations: a tone splits into two, four, then noise |
+| **HISS** | noise through a resonant filter that sweeps: the record's whistle and its *kssh* |
+
+- **Keys** are 27 spots on the record. Tap one to play its zone, hold it to scratch there in the STYLE, and tap
+  again quickly for finger strokes.
+- **SURF** (EDIT + KNOB4, 0..15): a held scratch drifts along the record while it loops (0 = it stays on the spot).
+- **FLOW** (EDIT + KNOB2 in SURF mode, 0..15, default 12): 0 = a battle record, separate sounds with crackly gaps;
+  10 and up = no gaps, the sounds sustain and each zone crossfades into the next (up to 174 ms), so the record is one
+  continuous landscape.
+- **WORLD** (KNOB4, 0..99): a different record. Each world leans on three of the materials. Turning it while a
+  sound plays morphs the sound under the needle.
+- **The jog** surfs anywhere, far past the keys. Flick it and let go, and the record coasts through zone after zone.
+- **AUTO in SURF mode = ETERNAL SKRATCH:** the robot rides the record by itself. It plays on, scratches where it is,
+  and skips a wave or two, forever, never the same.
+- The screen shows the record as a landscape scrolling under the needle: each zone is a mountain in its material's
+  colour, the 27 key spots are marked in yellow, and a little surfer rides the needle. The big line names the
+  material and the zone (`CHAOS 12`).
+- REC records SURF spots into the steps like words.
+
+**The jog** is more sensitive: about 2.5x further a click, 2.5x more again in SURF mode, a snappier hand and easier
+throws.
+
+**A harder band:** the guitar is a 7-string in **drop A** now (the default tuning; KNOB1 with EDIT still goes from
+F to F). The amp is hotter, with three stages, the last one lopsided like a rectifier, a deep mid scoop, a thump at
+100 Hz and a snarl at 3 kHz. Chugs are root + octave and slam shut. New grooves:
+
+- **SEASICK:** the second guitar plays the open chords a half step sharp and slides down onto the first. Dissonant
+  and woozy, and the bass clanks off the frets.
+- **DIVEBOMB:** whammy dives (an octave down in a quarter second) and a **pinch-harmonic squeal** with finger vibrato.
+- **BRUTAL TRUTH** (a grind blast, a chromatic tremolo riff) and **BAD DAY** (half time, seasick) replace BOUNCE and
+  B-BOY.
+
+Riffs can use the new moves in any groove: `a`..`k` = an open chord with a dive, `!` = the squeal.
+
+**MIDI clock over TRS:** the FM-1 follows MIDI clock (and Start / Stop) on the TRS input as well as on USB, with SYNC
+set to FOLLOW.
 
 ### What's new in 2.1
 
@@ -74,17 +126,17 @@ button always did.
 
 | Key / button | Tap / hold | With **EDIT** held |
 | --- | --- | --- |
-| **Keys** | DJ mode: 27 words (25 = AHHH, 26 = FRESH); tap = say it, hold = a tempo-synced scratch in the STYLE (in RAP MODE the last word you tap becomes the hook). BEAT mode: keys 1-12 = the kit (hold = roll), 13-27 = the first 15 words. TONE mode: the keys are a pitch fader (see TONE PLAY) | |
+| **Keys** | DJ mode: 27 words (25 = AHHH, 26 = FRESH); tap = say it, hold = a tempo-synced scratch in the STYLE (in RAP MODE the last word you tap becomes the hook). BEAT mode: keys 1-12 = the kit (hold = roll), 13-27 = the first 15 words. TONE mode: the keys are a pitch fader (see TONE PLAY). SURF mode: 27 spots on the INFINITE record (see 3.0 above) | |
 | **PLAY** | start / stop | TAP tempo |
 | **REC** | record into the 16 steps (quantized) | clear the words, keep the drums |
 | **SEQ** | hold = FILL (snare roll, chugs, toms) | clear the steps |
 | **ARP** | RAP MODE: verse / hook, the robot MCs | MUTATE the steps |
-| **GLO** | AUTO: the robot scratches by itself | HARD: drums driven, the kick ducks the deck |
+| **GLO** | AUTO: the robot scratches by itself (SURF mode: ETERNAL SKRATCH) | HARD: drums driven, the kick ducks the deck |
 | **FX** | tap = next FX, hold = the MIXER | previous FX |
 | **SEL** | hold = DROP (only the hats, then slam back in) | HAMSTER on / off |
 | **ENV** | hold = FREEZE (loop a sliver) | latch FREEZE |
 | **LFO** | tap = LFO on / off, hold = the PRO page | hold = CUT (the crossfader on 32nds) |
-| **HOME** | DJ / BEAT / TONE | pitch back to 0 |
+| **HOME** | DJ / BEAT / TONE / SURF | pitch back to 0 |
 | **OCT- / OCT+** | the deck's pitch, a semitone | BACKSPIN / BRAKE |
 | **SAVE** | save everything now | SYNC: FOLLOW / OFF |
 
@@ -92,11 +144,11 @@ button always did.
 | --- | --- | --- | --- | --- |
 | **SELECT** | JOG: scratch by hand (velocity) | VELOCITY FX: the flick pumps the FX | SPACE (the plate) | VERB |
 | **ALGORITHM** | STYLE (TONE mode: SOURCE) | SWING | fader CURVE | ECHO |
-| **KNOB1** | the FX's amount | TUNING: drop F .. drop F (B = 7-string) | LFO RATE | VOX |
-| **KNOB2** | GUITAR level | ECHO | LFO SHAPE | GUITAR |
+| **KNOB1** | the FX's amount | TUNING: drop F .. drop F (A = the 7-string, the default) | LFO RATE | VOX |
+| **KNOB2** | GUITAR level | ECHO (SURF mode: FLOW) | LFO SHAPE | GUITAR |
 | **KNOB3** | BPM 60..180 | KIT DECAY | LFO DEPTH | BASS |
-| **KNOB4** | SAM VOICE: MC GROWL ROBOT SAM ELF E.T. STUFFY OLD LADY | DRUMS level | LFO DEST | DRUMS |
-| **PRESETS** | GROOVE: OFF BOUNCE B-BOY JUMP BREAKDOWN RAP METAL BOOM BAP STOMP TRAP SLUDGE | REACH | motor TORQUE | WIDTH |
+| **KNOB4** | SAM VOICE: MC GROWL ROBOT SAM ELF E.T. STUFFY OLD LADY (SURF mode: WORLD 0..99) | DRUMS level (SURF mode: SURF drift) | LFO DEST | DRUMS |
+| **PRESETS** | GROOVE: OFF, BRUTAL TRUTH, BAD DAY, JUMP, BREAKDOWN, RAP METAL, BOOM BAP, STOMP, TRAP, SLUDGE, SEASICK, DIVEBOMB | REACH | motor TORQUE | WIDTH |
 
 **FX:** FILTER, CRUSH, MEGAPHONE, DEMON, CRUNCH, STUTTER, REVERSE, WAH, GROWL.
 
@@ -146,8 +198,8 @@ DJ mode. The LFO on PITCH gives vibrato, and the LFO on FADER with SQUARE gives 
 - **Vocals:** the post chain filters the 8-bit record's fizz, adds body under 250 Hz, then a fast compressor puts
   the voice in front. An exciter adds air, and a doubler makes it wide while staying mono-safe (the copy sits only in
   the side).
-- **Guitars:** a drop-B take rendered offline (plucked strings, an oversampled two-stage amp, a tone stack and a 4x12
-  cab), double-tracked hard left and right. The right side is a few cents up and about 11 ms late.
+- **Guitars:** a 7-string drop-A take rendered offline (plucked strings, an oversampled three-stage scooped amp, a tone
+  stack and a 4x12 cab, plus an open chord and a pinch-harmonic squeal), double-tracked hard left and right. The right side is a few cents up and about 11 ms late.
 - **Drums:** an 808 kit, rendered offline as 16-bit samples.
 - **Space:** a stereo plate reverb holds the vocals, snare, claps, toms and the echo, and the RAP hook gets a reverb
   throw.
@@ -187,9 +239,10 @@ git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
 
 tests/run_host.sh                           # on your computer: build/host/dinghy.wav + screen PNGs
 tests/run_pro.sh                            # the PRO scripts: techniques, tone play + LFO, the mixer (WAV + frames)
+tests/run_v3.sh                             # the 3.0 scripts: SURF, the korn grooves, TRS clock
 python3 tools/render_kit.py                 # re-render the 808 kit + guitar into firmware/gen/kit_pcm.h (needs numpy, scipy)
 ./build.sh                                  # -> build/dinghy.fwsc
-./build.sh --release 2.1                    # -> build/numetal-2.1.fwsc, "2.1" on the screen
+./build.sh --release 3.0                    # -> build/numetal-3.0.fwsc, "3.0" on the screen
 python3 tools/fm1_install.py build/dinghy.fwsc
 ```
 

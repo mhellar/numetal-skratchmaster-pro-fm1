@@ -6,12 +6,21 @@
  * PRO: a real LFO (tempo-synced, 7 shapes, 6 destinations), 17 turntablist techniques scored like TTM notation
  * (record motion + crossfader clicks, 64 ticks a beat) and COMBO routines, a HAMSTER switch, a fader CURVE, motor
  * TORQUE, TONE PLAY (the keys as a pitch fader on a tone or a word), anti-aliased fast scratches, AHH and FRESH.
+ * 3.0, INFINITE SKRATCH: SURF mode (HOME) plays a record that never ends, made as the needle reaches it from seven
+ * unconventional generators (FOF vowels, chirps and lasers, FM, bytebeat, word dust, the logistic map, resonant hiss),
+ * the same every time you scratch back over a spot; the keys are 27 spots on it, the jog surfs past them for ever, a
+ * held scratch drifts on (SURF), AUTO = ETERNAL SKRATCH (the robot surfs by itself). KNOB4 = the WORLD (100 records),
+ * EDIT + KNOB2 = FLOW (0 = a battle record with gaps, 10+ = one continuous record, the zones crossfading).
+ * And the band got harder: a 7-string in drop A, a hotter amp scooped deep, whammy dives, pinch squeals, the second
+ * guitar seasick (a half step sharp, sliding down) and a clanky bass in the new grooves SEASICK and DIVEBOMB.
  *
  *   KEYS       DJ mode: 27 words, tap = say it, HOLD = tempo-synced scratch in the STYLE while held
  *              (in RAP MODE the last word you tap becomes the HOOK)
  *              BEAT mode: keys 0..11 = the kit (hold = roll), keys 12..26 = the first 15 words
  *              TONE mode: the keys are the pitch fader, chromatic, the middle C key = the tuning's root: hold = the
  *              record runs at that pitch with the fader open, let go = the fader shuts (tone play)
+ *              SURF mode: the keys are 27 spots on the INFINITE record: tap = play that zone, HOLD = scratch there in
+ *              the STYLE, drifting along the record at SURF; taps again = finger strokes; the jog surfs anywhere
  *
  *   button     tap / hold                              EDIT held + button
  *   PLAY       start / stop                            TAP tempo
@@ -23,7 +32,7 @@
  *   SEL        hold = DROP (only the hats; slam back)  HAMSTER on / off
  *   ENV        hold = FREEZE (loop a sliver)           latch FREEZE
  *   LFO        tap = LFO on / off; hold = the PRO page hold = CUT (crossfader on 32nds)
- *   HOME       DJ / BEAT / TONE                        pitch back to 0
+ *   HOME       DJ / BEAT / TONE / SURF                 pitch back to 0
  *   OCT- OCT+  the deck's pitch, a semitone            BACKSPIN / BRAKE (the turntable's power cut)
  *   SAVE       save everything now                     SYNC: FOLLOW / OFF
  *   EDIT       hold = SHIFT: the screen shows the second layer and the audio LOAD
@@ -31,15 +40,15 @@
  *   encoder    turn                     EDIT held + turn          LFO held + turn (the PRO page)
  *   SELECT     JOG: scratch by hand     VELOCITY FX (a WAH pedal) SPACE: the plate's return
  *   ALGORITHM  STYLE (TONE: the SOURCE) SWING                     fader CURVE: SHARP MEDIUM SMOOTH
- *   KNOB1      the FX's amount          TUNING: drop F .. drop F  LFO RATE: 4 BAR .. 1/32, triplets
+ *   KNOB1      the FX's amount          TUNING: drop F .. drop F  LFO RATE: 4 BAR .. 1/32, triplets   (3.0: A by default)
  *   KNOB2      GUITAR (0 = off)         ECHO                      LFO SHAPE: SINE TRI SAW UP SAW DN SQUARE S&H DRIFT
  *   KNOB3      BPM 60..180              KIT DECAY                 LFO DEPTH
- *   KNOB4      SAM VOICE                DRUMS level               LFO DEST: FX PITCH FADER PAN RECORD BAND
+ *   KNOB4      SAM VOICE (SURF: WORLD)  DRUMS level (SURF: SURF)  LFO DEST: FX PITCH FADER PAN RECORD BAND
  *   PRESETS    GROOVE (and its riff)    REACH                     motor TORQUE: LOW MID HIGH MAX
  *   FX: FILTER CRUSH MEGAPHONE DEMON CRUNCH STUTTER REVERSE WAH GROWL.
  *   STYLES: BABY DRAG STAB FORWARD BACKWARD CHIRP TRANSFORM TEAR FLARE 2-CLICK ORBIT CRAB TWIDDLE TAZER SCRIBBLE
  *   HYDROPLANE LASER COMBO (routines: a technique a beat, phrased in fours, ending on a flourish).
- *   GROOVES: OFF BOUNCE B-BOY JUMP BREAKDOWN RAP METAL BOOM BAP STOMP TRAP SLUDGE.
+ *   GROOVES: OFF BRUTAL TRUTH BAD DAY JUMP BREAKDOWN RAP METAL BOOM BAP STOMP TRAP SLUDGE SEASICK DIVEBOMB.
  *   GROWL: the sludge throat, Melvins style: the word slowed down 5..12 semitones, an octave under it (the octaver's
  *   flip-flop), vocal fry (chopped by jittery pulses at 50..110 Hz), driven and darkened. In RAP MODE the hook is
  *   always growled. The GROWL voice (KNOB4) is SAM at its lowest and slowest.
@@ -104,7 +113,8 @@ static int32_t soft(int32_t x)                  /* clamp, then a cubic: round at
 #define FRESH_WORD 26
 #define TONE_WORD 27                            /* two records that are not words: the battle record's tones */
 #define BUZZ_WORD 28
-#define NBANK 29
+#define SURF_WORD 29                            /* not in the pool: the INFINITE record (SURF mode), made as it plays */
+#define NBANK 30
 #define TONE_LOOP 3795u                         /* 85 cycles of B3 (246.94 Hz) at 11025 Hz, a seamless loop */
 #define TONE_BYTES (2u * 3u * TONE_LOOP)        /* both tones, three loops each, at the start of the pool */
 #define WFS 11025u                              /* the bank is kept at 11025 Hz: 8 bit, ~26 s */
@@ -124,7 +134,7 @@ static const char *const SHOW[NBANK] = {        /* on screen */
     "DROP", "STOP", "FIRE", "WIRE", "LOUD", "CROWD",
     "HEAVY", "READY", "SCREAM", "MACHINE", "WRECK", "MIC CHECK",
     "SOUND", "UNDERGROUND", "BREAK IT DOWN", "LET'S GO", "COME ON", "YEAH",
-    "NU METAL SKRATCHMASTER", "AHHH", "FRESH", "TONE", "BUZZ"};
+    "NU METAL SKRATCHMASTER", "AHHH", "FRESH", "TONE", "BUZZ", "INFINITE"};
 
 #define NVOICES 8
 static const struct { const char *name; uint8_t speed, pitch, throat, mouth; } VOICES[NVOICES] = {
@@ -329,15 +339,18 @@ enum { D_KICK, D_SNARE, D_CLAP, D_HAT, D_OPEN, D_RIM, D_TOML, D_TOMH, D_808, D_C
 
 /* the riff: '.' nothing, '0'..'9' a palm-muted chug that many semitones over the tuning's root, 'A'..'K' an open
  * power chord (A = the root, B = a half step up, G = the tritone, H = the fifth). */
-typedef struct { const char *name; const char *lane[4]; uint8_t drum[4]; const char *riff; } groove_t;
-#define NGROOVES 10
+/* 3.0: 'a'..'k' = the open chord with a whammy dive (an octave down), '!' = a pinch-harmonic squeal (vibrato). A
+ * groove marked korn plays the second guitar a half step sharp on the open chords, sliding down onto the first
+ * (seasick, dissonant), and the bass clanks. */
+typedef struct { const char *name; const char *lane[4]; uint8_t drum[4]; const char *riff; uint8_t korn; } groove_t;
+#define NGROOVES 12
 static const groove_t GROOVES[NGROOVES] = {
     {"OFF",       {"................", "................", "................", "................"}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
                   "................"},
-    {"BOUNCE",    {"x..x..x...x..x..", "....x.......x...", "x.x.x.x.x.x.x.x.", "..............x."}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
-                  "0..0..B...0..G.."},
-    {"B-BOY",     {"x.....x.x.......", "....x.......x...", "x.x.x.x.x.x.x.x.", "......x........."}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
-                  "A.....0.0.....1."},
+    {"BRUTAL TRUTH", {"x.x.x.x.x.x.x.x.", ".x.x.x.x.x.x.x.x", "xxxxxxxxxxxxxxxx", "x..............."}, {D_KICK, D_SNARE, D_CHINA, D_CRASH},
+                  "0101010132321g.."},          /* grind: the blast, a chromatic tremolo riff, a dive out */
+    {"BAD DAY",   {"x.....x.x.......", "........x.......", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_OPEN, D_CRASH},
+                  "A.....00..1.b...", 1},       /* half time, sulking: seasick guitars, the bass clanking */
     {"JUMP",      {"x.xxx.xxx.xxx.xx", "....x.......x...", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_HAT, D_CRASH},
                   "0.000.000.000.BB"},
     {"BREAKDOWN", {"x..x......x..x..", "........x.......", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_CHINA, D_CRASH},
@@ -352,6 +365,10 @@ static const groove_t GROOVES[NGROOVES] = {
                   "A......0..0....."},
     {"SLUDGE",    {"x.......x.....x.", "........x.......", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_OPEN, D_CRASH},
                   "A.......B.....G."},
+    {"SEASICK",   {"x..x...x..x.x...", "....x.......x...", "x.x.x.x.x.x.x.x.", "x..............."}, {D_KICK, D_SNARE, D_HAT, D_CRASH},
+                  "A..0.0B...0.0.g.", 1},
+    {"DIVEBOMB",  {"x.x...x.x.x...x.", "....x.......x...", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_CHINA, D_CRASH},
+                  "a.0.0.0.0.00..!.", 1},
 };
 #define NFLOWS 7
 static const char *const FLOWS[NFLOWS] = {      /* RAP MODE: where the words start in a bar */
@@ -371,7 +388,9 @@ static struct {
     uint32_t tech, phrase, pstep;               /* the technique a scratch plays; COMBO: the routine, where in it */
     int32_t tsemi;                              /* TONE: the key's semitone */
     uint32_t tgate;                             /* TONE: the fader, open while a key is held */
-} dk = {-1, 0, 0, 0, 0, 0, 0, 0, 0, DK_OFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int32_t anchor;                             /* a scratch's spot on the record (Q16): 0 on a word, SURF: anywhere */
+    uint32_t szone;                             /* SURF: the zone a tap plays (it stops when the needle leaves it) */
+} dk = {-1, 0, 0, 0, 0, 0, 0, 0, 0, DK_OFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static struct { int32_t env; uint32_t pos, inc, end; } dr[NDRUM];   /* pos, inc: Q16 samples of the PCM */
 static int16_t echo_buf[12288] POOL;            /* at 22050 Hz: 0.55 s */
 static uint32_t nrng = 0x13579BDFu;
@@ -398,28 +417,39 @@ static const uint32_t INC_C9[12] = {            /* MIDI 120..131 (C9..B9); lower
 static uint32_t inc_of(uint32_t note) { if (note > 131u) note = 131u; return INC_C9[note % 12u] >> (10u - note / 12u); }
 #define SAW(ph) ((int32_t)(ph) >> 16)           /* -32768..32767 */
 static struct {                                 /* the guitars, double-tracked from one PCM take: R ~11 ms late, a few cents up */
-    const int16_t *pcm[2]; uint32_t end[2], pos[2], inc[2], next;
+    const int16_t *pcm[2]; uint32_t end[2], pos[2], inc[2], next, to;
     int32_t env, envr, mute, lag;
+    int32_t dv;                                 /* the whammy: the pitch, Q15 (32767 = as played), diving */
+    uint32_t dive, vib, vph;                    /* a dive on; the squeal's vibrato */
 } gt;
-static struct { uint32_t inc, ph, sph; int32_t env, mute, lp; } bs;          /* the bass: a saw and a sub sine */
-static void band_hit(uint32_t rc, uint32_t guitar)   /* a riff step: rc '0'..'9' chug, 'A'.. open; the verse: bass only */
+static struct { uint32_t inc, ph, sph; int32_t env, mute, lp, clk; } bs;     /* the bass: a saw and a sub sine, a clank */
+static void band_hit(uint32_t rc, uint32_t guitar)   /* a riff step: '0'..'9' chug, 'A'.. open, 'a'.. open + dive, '!' squeal */
 {
-    const uint32_t open = rc >= 'A', note = 29u + p_tune + (open ? rc - 'A' : rc - '0');   /* tune 6 = B1, drop B */
-    const uint32_t root = inc_of(note);
+    const uint32_t sq = rc == '!', dive = rc >= 'a' && rc <= 'k', korn = GROOVES[p_groove % NGROOVES].korn;
+    uint32_t open, note, root;
+    if (dive) rc -= 32u;
+    open = sq || rc >= 'A';
+    note = 29u + p_tune + (sq ? 0u : open ? rc - 'A' : rc - '0');   /* tune 4 = A1: the 7-string, drop A */
+    root = inc_of(note);
     if (guitar) {
-        const uint32_t r = (uint32_t)pitch_rate(PCM_GOPEN_FS * 65536 / 44100, ((int32_t)note - 35) << 8);   /* the take: B1 */
-        gt.pcm[0] = open ? PCM_GOPEN : PCM_GCHUG;
-        gt.end[0] = (open ? sizeof PCM_GOPEN / 2u : sizeof PCM_GCHUG / 2u) - 1u;
+        const uint32_t fs = sq ? PCM_GSQUEAL_FS : PCM_GOPEN_FS;
+        const uint32_t r = (uint32_t)pitch_rate((int32_t)(fs * 65536u / 44100u), ((int32_t)note - 33) << 8);   /* the takes: A1 */
+        gt.pcm[0] = sq ? PCM_GSQUEAL : open ? PCM_GOPEN : PCM_GCHUG;
+        gt.end[0] = (sq ? sizeof PCM_GSQUEAL / 2u : open ? sizeof PCM_GOPEN / 2u : sizeof PCM_GCHUG / 2u) - 1u;
         gt.end[0] <<= 16;
         gt.pos[0] = 0; gt.inc[0] = r;
-        gt.next = r + (r >> 8);
+        gt.to = r + (r >> 8);
+        gt.next = korn && open && !sq ? (uint32_t)pitch_rate((int32_t)gt.to, 256) : gt.to;   /* seasick: a half step sharp, sliding */
         gt.env = 32767 << 8;
         gt.lag = 480;
         gt.mute = !open;
+        gt.dv = 32767; gt.dive = dive; gt.vib = sq; gt.vph = 0;
     }
+    if (sq) return;                             /* the squeal rides over the bass */
     bs.inc = root;
     bs.env = 32767 << 8;
     bs.mute = !open;
+    if (korn) bs.clk = 32767 << 8;
 }
 
 static int32_t deck_speed(int32_t rate0, uint32_t fx, uint32_t amt)   /* DEMON and GROWL slow the record down */
@@ -470,20 +500,321 @@ static void rap_flow(uint32_t bar, uint32_t steplen)   /* RAP MODE: a bar of wor
 }
 
 
+static uint32_t bump(uint32_t ph16)             /* 0 .. 32767 .. 0 over a cycle (1 - cos) / 2 */
+{
+    return (uint32_t)((32767 - sine((ph16 << 16) + 0x40000000u)) >> 1);
+}
+
+/* =========================================================================== INFINITE SKRATCH: the endless record
+ * SURF mode's record never ends and takes no flash: every stretch of it is made from where it is (its sample number)
+ * and the WORLD, so scratching back over a spot plays the same sound again. It is cut into zones of 0.74 s, each a
+ * "sample on a battle record" with its own attack, body and gap (vinyl crackle), made one of seven ways:
+ *   AHHH   a vowel of FOF grains (a pulse a pitch period, three formants ringing off it), pitch gliding, the vowel morphing
+ *   CHIRP  a tone sweeping octaves, or a LASER (the sweep repeating), sine, fat square, saw or sine + octave
+ *   FM     two operators, the index decaying, rising or wobbling: bells, screeches, the FM-1 being itself
+ *   BYTE   a bytebeat formula (t * (t >> a | t >> b) ...) read at the record's speed: the 8-bit shrapnel
+ *   DUST   the SAM bank shattered: grains of the words, re-pitched, some backwards, two streams overlapped
+ *   CHAOS  the logistic map, its r swept through the bifurcations: a tone splits into two, four, then noise
+ *   HISS   noise through a resonant filter that sweeps: the record's whistle and its kssh
+ * A WORLD leans on three of them. 1.5 s of the record lives in RAM, made 256 samples at a time as the needle gets
+ * near, and the window slides along with the needle, so the record goes on in both directions for days. */
+#define ZSH 13u
+#define ZLEN (1u << ZSH)                        /* a zone: 8192 samples, 0.74 s */
+#define SURF_TILE 256u
+#define SURF_NT 64u
+#define SURF_WIN (SURF_TILE * SURF_NT)          /* the window: 16384 samples, 1.49 s */
+#define SURF_STEP (SURF_WIN / 4u)               /* it slides a quarter at a time */
+#define SURF_KEY 32                             /* commands and steps: SURF_KEY + k = the k-th spot on the record */
+#define SURF_HERE 127                           /* ...or wherever the needle is */
+#define NSURFK 27
+enum { Z_AHHH, Z_CHIRP, Z_FM, Z_BYTE, Z_DUST, Z_CHAOS, Z_HISS, Z_COUNT };
+static const char *const ZNAME[Z_COUNT] = {"AHHH", "CHIRP", "FM", "BYTE", "DUST", "CHAOS", "HISS"};
+enum { ZE_STAB, ZE_HOLD, ZE_SWELL, ZE_CHOP };
+typedef struct { uint32_t h, h2, h3, mat, len, shape; } zone_t;
+static int8_t surf_buf[SURF_WIN + 64u] __attribute__((aligned(4)));
+static int32_t surf_tmp[SURF_TILE];
+static uint8_t surf_ok[SURF_NT];
+static uint32_t surf_base, surf_world = ~0u;
+static volatile uint32_t p_world, p_surf = 4, p_surfmode, surf_abs_v;
+
+static uint32_t hsh(uint32_t x) { x ^= x >> 16; x *= 0x7FEB352Du; x ^= x >> 15; x *= 0x846CA68Bu; x ^= x >> 16; return x; }
+static void zone_of(uint32_t world, uint32_t z, zone_t *zp)   /* what zone z of a world is (main and ISR: no state) */
+{
+    const uint32_t wh = hsh(world * 0x9E3779B9u + 0x51u), h = hsh(z * 0x85EBCA6Bu ^ wh), r = h & 7u;
+    zp->h = h; zp->h2 = hsh(h + 1u); zp->h3 = hsh(h + 2u);
+    zp->mat = r < 5u ? (wh >> (r % 3u * 5u)) % Z_COUNT : (h >> 8) % Z_COUNT;   /* the world's three, mostly */
+    zp->len = 2048u + ((h >> 3) & 3u) * 2048u;                                /* the sound; the rest is the gap */
+    zp->shape = (h >> 12) & 3u;
+}
+static int32_t zone_env(const zone_t *zp, uint32_t t)   /* the zone's envelope at t, Q15 */
+{
+    const uint32_t len = zp->len;
+    int32_t e, u;
+    if (t >= len) return 0;
+    u = (int32_t)(t * 32767u / len);
+    switch (zp->shape) {
+    case ZE_STAB: e = 32767 - u; e = (e * ((e >> 1) + 16384)) >> 15; if (t < 24u) e = e * (int32_t)t / 24; break;   /* between linear and squared */
+    case ZE_SWELL: e = (u * u) >> 15; if (len - t < 64u) e = e * (int32_t)(len - t) / 64; break;   /* a reverse cymbal */
+    case ZE_CHOP: {                             /* chopped in 16ths, a pattern of its own */
+        const uint32_t sl = len >> 4, seg = t / sl, in = t - seg * sl;
+        e = !seg || (zp->h3 >> seg & 1u) ? 30000 - u / 3 : 0;
+        if (in < 24u) e = e * (int32_t)in / 24;
+        if (sl - in < 24u) e = e * (int32_t)(sl - in) / 24;
+        break;
+    }
+    default: e = 32767; if (t < 96u) e = (int32_t)t * 341; if (len - t < 640u) e = (int32_t)(len - t) * 51; break;
+    }
+    return e;
+}
+
+#define HZ(f) ((uint32_t)(f) * 389566u)          /* Hz -> phase a sample at 11025 */
+static const uint16_t VOW[5][3] = {{730, 1090, 2440}, {570, 840, 2410}, {530, 1840, 2480}, {300, 870, 2240}, {270, 2290, 3010}};
+static const uint16_t VOW_AMP[3] = {32767, 18000, 10000}, VOW_DEC[3] = {14, 22, 30};
+static const uint16_t GLIDE8[8] = {128, 192, 256, 341, 384, 512, 171, 256};
+static const uint16_t SWEEP8[8] = {64, 128, 512, 1024, 256, 32, 768, 192};
+static const uint16_t FMR8[8] = {256, 362, 512, 896, 128, 1792, 640, 1024};
+static const uint16_t DUST8[8] = {128, 171, 192, 256, 256, 304, 384, 512};
+
+static uint32_t zone_len(const zone_t *zp, uint32_t flow)   /* FLOW stretches the sound over the gap */
+{
+    return zp->len + (ZLEN - zp->len) * (flow < 10u ? flow : 10u) / 10u;   /* 10 and up: no gaps at all */
+}
+static int32_t zone_env_flow(const zone_t *zp, uint32_t t, uint32_t flow)   /* the envelope with FLOW: longer, flatter */
+{
+    zone_t q = *zp;
+    int32_t e;
+    q.len = zone_len(zp, flow);
+    if (t >= ZLEN) t = ZLEN - 1u;                   /* a zone's tail into the next: held at its end */
+    if (t >= q.len) return 0;
+    e = zone_env(&q, t);
+    if (!flow) return e;
+    e += (32767 - e) * (int32_t)flow / 15;          /* 15: flat, the crossfades shape it */
+    if (q.len < ZLEN && q.len - t < 256u) e = e * (int32_t)(q.len - t) / 256;   /* into the gap, softly */
+    return e;
+}
+static volatile uint32_t p_flow = 12;
+static int32_t surf_tmp2[SURF_TILE];
+
+static void surf_gen(const zone_t *zpp, uint32_t n0, uint32_t t0, int32_t *o)   /* a zone's material, t0 .. + 256 (t0 may run past its end) */
+{
+    uint32_t i, k;
+    const zone_t zp = *zpp;
+    for (i = 0; i < SURF_TILE; i++) o[i] = 0;
+    switch (zp.mat) {
+    case Z_AHHH: {                              /* FOF: phase of a gliding pulse, the time since it, three formants ringing */
+        const uint32_t f0 = 80u + (zp.h2 & 127u) * 3u / 2u, f1 = f0 * GLIDE8[zp.h2 >> 7 & 7u] >> 8;
+        const uint32_t va = (zp.h2 >> 10) % 5u, vb = (zp.h2 >> 13) % 5u, L = zp.len;
+        const int32_t inc0 = (int32_t)HZ(f0), dinc = ((int32_t)HZ(f1) - inc0) / (int32_t)L;
+        const uint32_t phL = (uint32_t)inc0 * L + (uint32_t)dinc * (L * (L - 1u) / 2u), incL = (uint32_t)(inc0 + dinc * (int32_t)L);
+        for (i = 0; i < SURF_TILE; i++) {
+            const uint32_t t = t0 + i, tg = t < L ? t : L;   /* past its end: the pitch holds where the glide ended */
+            const uint32_t ph = t < L ? (uint32_t)inc0 * t + (uint32_t)dinc * (t * (t - 1u) / 2u) : phL + incL * (t - L);
+            const uint32_t d = ((uint32_t)(inc0 + dinc * (int32_t)tg) >> 8) + 1u, tau = (ph >> 4) / d, per = 0x0FFFFFFFu / d;
+            const int32_t u = t >= zp.len ? 255 : (int32_t)(t * 256u / zp.len);
+            int32_t acc = 0;
+            for (k = 0; k < 3u; k++) {
+                const int32_t F = VOW[va][k] + ((((int32_t)VOW[vb][k] - VOW[va][k]) * u) >> 8);
+                const uint32_t fi = HZ(F) >> 4;
+                int32_t g1 = 32767 - (int32_t)tau * VOW_DEC[k], g2 = 32767 - (int32_t)(tau + per) * VOW_DEC[k];
+                g1 = g1 < 0 ? 0 : (g1 * g1) >> 15;
+                g2 = g2 < 0 ? 0 : (g2 * g2) >> 15;                      /* the last pulse's tail, still ringing */
+                acc += (((sine(fi * tau) * g1) >> 15) + ((sine(fi * (tau + per)) * g2) >> 15)) * VOW_AMP[k] >> 15;
+            }
+            o[i] = acc * 2 / 5;
+        }
+        break;
+    }
+    case Z_CHIRP: {
+        const uint32_t f0 = 150u + (zp.h2 & 1023u) * 2u, wf = zp.h3 & 3u;
+        const uint32_t P = zp.h2 >> 20 & 1u ? 512u << (zp.h2 >> 21 & 3u) : zp.len;   /* a LASER: the sweep repeats */
+        uint32_t f1 = f0 * SWEEP8[zp.h2 >> 12 & 7u] >> 8;
+        int32_t inc0, dinc;
+        if (f1 > 4000u) f1 = 4000u;
+        if (f1 < 30u) f1 = 30u;
+        inc0 = (int32_t)HZ(f0); dinc = ((int32_t)HZ(f1) - inc0) / (int32_t)P;
+        for (i = 0; i < SURF_TILE; i++) {
+            const uint32_t tp = (t0 + i) % P, ph = (uint32_t)inc0 * tp + (uint32_t)dinc * (tp * (tp - 1u) / 2u);
+            o[i] = wf == 0u ? sine(ph) : wf == 1u ? soft(sine(ph) * 3) : wf == 2u ? (int32_t)ph >> 17 : (sine(ph) * 2 + sine(ph * 2u)) / 3;
+        }
+        break;
+    }
+    case Z_FM: {
+        const uint32_t fc = 55u + (zp.h2 & 511u), fm = fc * FMR8[zp.h2 >> 9 & 7u] >> 8, ic = HZ(fc), im = HZ(fm);
+        const uint32_t ish = zp.h3 >> 14 & 3u, il = HZ(3u + (zp.h3 >> 16 & 7u));
+        int32_t imax = 6000 + (int32_t)(zp.h3 & 16383u) * 5 / 3;
+        if (imax > 32767) imax = 32767;
+        for (i = 0; i < SURF_TILE; i++) {
+            const uint32_t t = t0 + i;
+            const int32_t u = t >= zp.len ? 32767 : (int32_t)(t * 32767u / zp.len), du = 32767 - u;
+            const int32_t I = ish == 0u ? (int32_t)(((imax * ((du * du) >> 15)) >> 15)) : ish == 1u ? (imax * u) >> 15
+                            : ish == 2u ? (imax * (32767 + sine(il * t))) >> 16 : imax;
+            const uint32_t mod = (uint32_t)(sine(im * t) * (I >> 1)) << 3;
+            o[i] = sine(ic * t + mod);
+        }
+        break;
+    }
+    case Z_BYTE: {
+        const uint32_t br = 140u + (zp.h2 & 255u) * 2u, a = 2u + (zp.h2 >> 8 & 7u), b = 5u + (zp.h2 >> 11 & 7u);
+        const uint32_t c = (zp.h2 >> 14 & 255u) | 1u, f = zp.h3 & 7u, off = zp.h3 >> 8 & 0x3FFFFu, mel = 0xCA98u ^ (c << 4);
+        for (i = 0; i < SURF_TILE; i++) {
+            const uint32_t T = (((t0 + i) * br) >> 8) + off;
+            uint32_t v;
+            switch (f) {
+            case 0: v = T * (T >> a | T >> b); break;
+            case 1: v = T * ((T >> a) & (T >> b) & c); break;
+            case 2: v = (T * a & T >> b) | (T * 3u & T >> (a + 4u)); break;
+            case 3: v = T * (((T >> a) | (T >> b)) & (c & 63u)); break;
+            case 4: v = ((T >> a) ^ (T >> b)) * T; break;
+            case 5: v = (T * (T >> 8 | T >> 9) & 46u & T >> 8) ^ ((T & T >> 13) | T >> 6); break;
+            case 6: v = T * (mel >> (T >> b & 14u) & 15u); break;
+            default: v = (T * 5u & T >> 7) | (T * 3u & T >> 10); break;
+            }
+            o[i] = ((int32_t)(v & 255u) - 128) * 190;
+        }
+        break;
+    }
+    case Z_DUST: {                              /* grains of the words: two overlapped streams, a fresh grain each */
+        const uint32_t gsh = 8u + (zp.h2 & 1u) + (zp.h2 >> 1 & 1u), G = 1u << gsh;
+        if (bank_busy) break;
+        for (i = 0; i < SURF_TILE; i++) {
+            const uint32_t t = t0 + i;
+            int32_t acc = 0;
+            for (k = 0; k < 2u; k++) {
+                const uint32_t tt = t + k * (G >> 1), gi = tt >> gsh, pa = tt & (G - 1u);
+                const uint32_t hg = hsh(zp.h ^ ((gi * 2u + k) * 0x9E3779B9u)), w = hg % NKEYW, L = bank[w].len;
+                uint32_t idx, p, st;
+                if (L < 64u) continue;
+                idx = (pa * DUST8[hg >> 20 & 7u] >> 8) % L;
+                st = (hg >> 8) % L;
+                p = hg >> 31 ? (st + L - idx) % L : (st + idx) % L;   /* some of them backwards */
+                acc += (wpool[bank[w].off + p] * (int32_t)bump(pa << (16u - gsh))) >> 7;
+            }
+            o[i] = acc;
+        }
+        break;
+    }
+    case Z_CHAOS: {                             /* x = r x (1 - x), r swept from r0 to r1, a value held H samples */
+        const int32_t r0 = 58000 + (int32_t)(zp.h2 % 7536u), r1 = 58000 + (int32_t)((zp.h2 >> 13) % 7536u);
+        const int32_t H0 = 2 + (int32_t)(zp.h3 & 15u), H1 = 2 + (int32_t)(zp.h3 >> 4 & 15u);
+        uint32_t x = 16384u + (hsh(n0 ^ zp.h) >> 17);
+        int32_t cnt = 0;
+        const int32_t u0 = t0 >= zp.len ? 32767 : (int32_t)(t0 * 32767u / zp.len), rr0 = r0 + (((r1 - r0) * u0) >> 15);
+        for (k = 0; k < 24u; k++) x = ((x * (65536u - x)) >> 16) * (uint32_t)rr0 >> 14;   /* onto the attractor */
+        for (i = 0; i < SURF_TILE; i++) {
+            const uint32_t t = t0 + i;
+            const int32_t u = t >= zp.len ? 32767 : (int32_t)(t * 32767u / zp.len);
+            if (++cnt >= H0 + (((H1 - H0) * u) >> 15)) {
+                cnt = 0;
+                x = ((x * (65536u - x)) >> 16) * (uint32_t)(r0 + (((r1 - r0) * u) >> 15)) >> 14;
+                if (x < 16u || x > 65520u) x = 20000u + (t & 4095u);
+            }
+            o[i] = ((int32_t)x - 32768) * 3 / 4;
+        }
+        break;
+    }
+    case Z_HISS: {                              /* noise through a resonant state-variable band-pass, swept */
+        const int32_t fa = 150 + (int32_t)(zp.h2 & 1023u) * 3 / 2, fb = 150 + (int32_t)(zp.h2 >> 10 & 1023u) * 3 / 2;
+        const int32_t q = 3000 + (int32_t)(zp.h3 & 16383u);
+        int32_t lo = 0, bd = 0;
+        for (i = 0; i < SURF_TILE + 48u; i++) {  /* 48 samples before the tile first: the filter warms up the same way */
+            const uint32_t n = n0 - 48u + i, t = t0 + i - 48u;   /* (wraps huge before the zone: u holds at the end) */
+            const int32_t u = t >= zp.len ? 32767 : (int32_t)(t * 32767u / zp.len);
+            const int32_t ns = (int32_t)(hsh(n * 0x9E3779B1u ^ zp.h) >> 17) - 16384, f = (fa + (((fb - fa) * u) >> 15)) * 19;
+            const int32_t hp = ns - lo - ((q * bd) >> 15);
+            bd += (f * (hp >> 1)) >> 14;
+            lo += (f * (bd >> 1)) >> 14;
+            bd = bd > 60000 ? 60000 : bd < -60000 ? -60000 : bd;
+            lo = lo > 60000 ? 60000 : lo < -60000 ? -60000 : lo;
+            if (i >= 48u) o[i - 48u] = (bd >> 1) + (ns >> 3);
+        }
+        break;
+    }
+    default: break;
+    }
+}
+
+static void surf_tile(uint32_t ti)              /* make 256 samples of the record into the window */
+{
+    const uint32_t n0 = surf_base + ti * SURF_TILE, t0 = n0 & (ZLEN - 1u), flow = p_flow, F = flow * 128u;
+    int32_t *o = surf_tmp, *op = surf_tmp2;
+    int8_t *out = surf_buf + ti * SURF_TILE;
+    zone_t zp, pz;
+    uint32_t i, len;
+    zone_of(surf_world, n0 >> ZSH, &zp);
+    surf_ok[ti] = 1;
+    len = zone_len(&zp, flow);
+    if (t0 < len) surf_gen(&zp, n0, t0, o); else for (i = 0; i < SURF_TILE; i++) o[i] = 0;
+    if (t0 < F) {                               /* FLOW: the zone before runs on under this one's start, fading out */
+        zone_of(surf_world, (n0 >> ZSH) - 1u, &pz);
+        surf_gen(&pz, n0, t0 + ZLEN, op);
+    }
+    for (i = 0; i < SURF_TILE; i++) {           /* the envelope, 8 bit; the gaps crackle */
+        const uint32_t t = t0 + i;
+        int32_t v;
+        if (t < F) {                            /* the crossfade: equal-ish power (both halves bowed) */
+            const int32_t x = (int32_t)(t * 32767u / F), fi = 32767 - (((32767 - x) * (32767 - x)) >> 15), fo = 32767 - ((x * x) >> 15);
+            const int32_t ei = (zone_env_flow(&zp, t, flow) * fi) >> 15, eo = (zone_env_flow(&pz, ZLEN - 1u, flow) * fo) >> 15;
+            v = ((o[i] * (ei >> 7)) >> 16) + ((op[i] * (eo >> 7)) >> 16);
+        } else if (t < len) v = (o[i] * (zone_env_flow(&zp, t, flow) >> 7)) >> 16;
+        else {
+            const uint32_t n = n0 + i, c = hsh(n ^ 0xC0FFEEu ^ zp.h), c1 = hsh((n - 1u) ^ 0xC0FFEEu ^ zp.h);
+            v = ((c & 1023u) < 3u ? (int32_t)(c >> 26) + 30 : 0) - ((c1 & 1023u) < 3u ? ((int32_t)(c1 >> 26) + 30) / 2 : 0);
+            v += ((int32_t)(c >> 29) - 4) >> 1;   /* the surface */
+        }
+        out[i] = (int8_t)(v > 127 ? 127 : v < -127 ? -127 : v);
+    }
+}
+static void surf_flush(void) { uint32_t k; for (k = 0; k < SURF_NT; k++) surf_ok[k] = 0; }
+static void surf_slide(int32_t ds)              /* the window moves along the record a quarter, either way */
+{
+    const uint32_t nt = SURF_STEP / SURF_TILE, nw = (SURF_WIN - SURF_STEP) / 4u;
+    const int32_t q = ds * 65536;
+    uint32_t *b = (uint32_t *)surf_buf, k;
+    if (ds > 0) {
+        for (k = 0; k < nw; k++) b[k] = b[k + SURF_STEP / 4u];
+        for (k = 0; k < SURF_NT; k++) surf_ok[k] = k + nt < SURF_NT ? surf_ok[k + nt] : 0u;
+    } else {
+        for (k = nw; k-- > 0u;) b[k + SURF_STEP / 4u] = b[k];
+        for (k = SURF_NT; k-- > 0u;) surf_ok[k] = k >= nt ? surf_ok[k - nt] : 0u;
+    }
+    surf_base += (uint32_t)ds;
+    dk.pos -= q; dk.hand -= q; dk.frz -= q; dk.st_from -= q; dk.st_to -= q; dk.anchor -= q;
+    dk.stut = (uint32_t)((int32_t)dk.stut - q);
+}
+static uint32_t surf_zone_now(void) { return (surf_base + (uint32_t)(dk.pos >> 16)) >> ZSH; }
+static void surf_go(uint32_t z)                 /* the needle onto zone z's start; the window jumps if it is far */
+{
+    const uint32_t zs = z << ZSH;
+    if (zs - surf_base < SURF_STEP || zs - surf_base > SURF_WIN - SURF_STEP) { surf_base = zs - SURF_STEP; surf_flush(); }
+    dk.pos = (int32_t)((zs - surf_base) << 16);
+}
+
 static void deck_start(int32_t w, uint32_t kind, uint32_t once)
 {
-    if (w < 0 || w >= NBANK || !bank[w].len || bank_busy) return;
+    uint32_t surf = 0, here = w == SURF_HERE;
+    if (bank_busy) return;
+    if (here) {                                 /* SURF: on from wherever the needle is */
+        surf = 1;
+        if (dk.word != SURF_WORD) surf_go((noise() >> 8) % NSURFK);
+    } else if (w >= SURF_KEY && w < SURF_KEY + NSURFK) { surf = 1; surf_go((uint32_t)(w - SURF_KEY)); }
+    else if (w < 0 || w >= SURF_WORD || !bank[w].len) return;
+    if (surf) w = SURF_WORD;
     dk.word = w;
     dk.growl = 0;
     dk.stut = 0; dk.stut_n = 0;
     if (kind == CMD_SCR) {
-        dk.mode = DK_SCR; dk.ph = 0; dk.once = once; dk.pos = 0;
+        dk.mode = DK_SCR; dk.ph = 0; dk.once = once;
+        if (!surf) dk.pos = 0;
+        dk.anchor = dk.pos;                     /* a word: from its start; the record: from the spot */
         if (p_style == SC_COMBO) { dk.phrase = (noise() >> 8) % NPHRASE; dk.pstep = 0; dk.tech = PHRASE[dk.phrase][0]; }
         else dk.tech = p_style % NTECH;
     } else {
         if (dk.mode == DK_OFF || dk.mode == DK_REST || dk.mode == DK_LET) dk.rate = TORQUE_SH[p_torque] ? 0 : dk.rate;   /* the motor winds up */
         dk.mode = DK_PLAY;
-        dk.pos = p_fx == FX_REVERSE ? (int32_t)((bank[w].len - 2u) << 16) : 0;
+        if (surf) {
+            if (p_fx == FX_REVERSE && !here) dk.pos += (int32_t)(ZLEN - 2u) << 16;   /* from the zone's end, back */
+            dk.szone = surf_zone_now();
+        } else dk.pos = p_fx == FX_REVERSE ? (int32_t)((bank[w].len - 2u) << 16) : 0;
     }
     dk_word_v = w;
 }
@@ -498,11 +829,6 @@ static void drum_hit(uint32_t d)
     dr[d].end = (p->len - 1u) << 16;
     if (d == D_HAT) dr[D_OPEN].env = 0;         /* the closed hat chokes the open one */
     drum_hit_v |= 1u << d;
-}
-
-static uint32_t bump(uint32_t ph16)             /* 0 .. 32767 .. 0 over a cycle (1 - cos) / 2 */
-{
-    return (uint32_t)((32767 - sine((ph16 << 16) + 0x40000000u)) >> 1);
 }
 
 static int32_t tech_pos(uint32_t t, uint32_t ph)   /* where technique t has the record at ph (Q16 beats): 0..32767 */
@@ -580,7 +906,11 @@ static void app_audio(int32_t *out, uint32_t n)
         cmd_seen = cmd_n;
         if (cmd_kind == CMD_LET) { if (dk.mode == DK_SCR) dk.mode = DK_LET; }
         else if (cmd_kind == CMD_STROKE) {      /* a finger stroke from wherever the record is */
-            const int32_t w = (int32_t)cmd_arg;
+            int32_t w = (int32_t)cmd_arg;
+            if (w >= SURF_KEY && w < SURF_KEY + NSURFK && !bank_busy) {   /* SURF: the spot, unless the needle is in it */
+                if (dk.word != SURF_WORD || surf_zone_now() != (uint32_t)(w - SURF_KEY)) surf_go((uint32_t)(w - SURF_KEY));
+                dk.word = w = SURF_WORD; dk_word_v = w;
+            }
             if (w >= 0 && w < NBANK && bank[w].len && !bank_busy) {
                 const int32_t len = (int32_t)bank[w].len << 16;
                 if (dk.word != w) { dk.word = w; dk.pos = 0; dk_word_v = w; }
@@ -619,7 +949,7 @@ static void app_audio(int32_t *out, uint32_t n)
         spin_seen = p_spin;
         if (dk.word >= 0 && !bank_busy) {
             int32_t len = (int32_t)bank[dk.word].len << 16;
-            if (dk.mode == DK_OFF || dk.pos >= len || dk.pos <= 0) dk.pos = len - (1 << 16);
+            if (dk.word != SURF_WORD && (dk.mode == DK_OFF || dk.pos >= len || dk.pos <= 0)) dk.pos = len - (1 << 16);
             dk.mode = DK_SPIN;
             dk.rate = -14 * rate0;
         }
@@ -646,7 +976,11 @@ static void app_audio(int32_t *out, uint32_t n)
         if (dk.word >= 0 && !bank_busy) {
             int32_t len = (int32_t)bank[dk.word].len << 16;
             if (dk.mode != DK_HAND) { dk.hand = dk.pos < 0 ? 0 : dk.pos > len ? len : dk.pos; dk.mode = DK_HAND; }
-            dk.hand += d * (p_jog_gain << 16);   /* velocity: a fast flick throws it further */
+            {                                   /* velocity: a fast flick throws it further */
+                int32_t mv = d * p_jog_gain;
+                mv = mv > 12000 ? 12000 : mv < -12000 ? -12000 : mv;
+                dk.hand += mv << 16;
+            }
             if (dk.hand < 0) dk.hand = 0;
             if (dk.hand > len) dk.hand = len;
         }
@@ -664,8 +998,21 @@ static void app_audio(int32_t *out, uint32_t n)
     }
 
     for (off = 0; off < n; off += 64u) {
-        uint32_t m = n - off < 64u ? n - off : 64u, d, band_c = 32767;
+        uint32_t m = n - off < 64u ? n - off : 64u, d, band_c = 32767, gblk = 0;
         int32_t gate = 1, ft, lfo_v = 0, lfo_gt = 32767, pan = 0, rec_add = 0;
+
+        /* ---- SURF: a new WORLD (or a new voice for the dust) remakes the record; the window follows the needle */
+        {
+            static uint32_t flow_seen = ~0u;
+            if (bank_busy) surf_world = ~0u;
+            else if (p_world != surf_world || p_flow != flow_seen) { surf_world = p_world; flow_seen = p_flow; surf_flush(); }
+        }
+        if (dk.word == SURF_WORD) {
+            const int32_t ip = dk.pos >> 16;
+            if (ip > (int32_t)(SURF_WIN - SURF_STEP)) surf_slide((int32_t)SURF_STEP);
+            else if (ip < (int32_t)SURF_STEP) surf_slide(-(int32_t)SURF_STEP);
+            surf_abs_v = surf_base + (uint32_t)(dk.pos >> 16);
+        }
 
         /* ---- the LFO, once per block: its phase is the song's position, so it sits on the grid */
         if (lfo_on) {
@@ -716,6 +1063,7 @@ static void app_audio(int32_t *out, uint32_t n)
             if (ext_wait) ginc = 0;
             if (!rap) { rap_part_v = 0; for (d = 0; d < 16u; d++) rap_line[d] = -1; }
             G += ginc;
+            gblk = ginc;
             dk.ph += ginc >> 2;                                 /* scratches move in beats */
             while (due < 2u) {
                 const uint32_t s = stepn & 15u, at = (stepn << 16) + (s & 1u ? p_swing * 65536u / 40u : 0u);
@@ -756,6 +1104,16 @@ static void app_audio(int32_t *out, uint32_t n)
                                     deck_start((int32_t)p_hook, CMD_SCR, 1);   /* the scratch back into the verse */
                             }
                         }
+                    } else if (p_auto && p_surfmode) {              /* ETERNAL SKRATCH: the robot surfs on, forever */
+                        const uint32_t r = noise() >> 24;
+                        if (dk.mode == DK_FRZ || dk.mode == DK_HAND || dk.mode == DK_THROW || dk.mode == DK_SPIN || dk.mode == DK_STROKE) {}
+                        else if (dk.word != SURF_WORD || dk.mode == DK_OFF || dk.mode == DK_REST) deck_start(SURF_HERE, CMD_SAY, 0);
+                        else if (dk.mode == DK_PLAY && ((s == 0u && r < 120u) || (s == 8u && r < 90u) || (s == 12u && r < 50u)))
+                            deck_start(SURF_HERE, CMD_SCR, 1);          /* a technique right where it is */
+                        else if (dk.mode == DK_PLAY && s == 4u && r < 40u) {   /* a wave: skip on a zone or two */
+                            surf_go(surf_zone_now() + 1u + (r & 1u));
+                            deck_start(SURF_HERE, CMD_SAY, 0);
+                        }
                     } else if (p_auto && dk.mode != DK_FRZ) {       /* the robot DJ */
                         uint32_t r = noise() >> 24;
                         if ((s == 0 && r < 180) || (s == 8 && r < 100) || (s == 6 && r < 30))
@@ -790,7 +1148,10 @@ static void app_audio(int32_t *out, uint32_t n)
         if (lfo_on && ldest == LD_RECORD) rec_add = (((lfo_v * (rate0 >> 2)) >> 15) * (int32_t)ldepth * 16) / 15;
 
         /* ---- the deck: where the record goes this block */
-        if (dk.mode == DK_PLAY && last_mode != DK_PLAY) mot = dk.rate;   /* the motor takes the record as it finds it */
+        if (dk.mode == DK_PLAY && last_mode != DK_PLAY) {   /* the motor takes the record as it finds it */
+            mot = dk.rate;
+            if (dk.word == SURF_WORD) dk.szone = surf_zone_now();   /* let go on the record: it plays that zone out */
+        }
         last_mode = dk.mode;
         if (dk.word >= 0 && !bank_busy) {
             int32_t len = (int32_t)bank[dk.word].len << 16;
@@ -800,7 +1161,11 @@ static void app_audio(int32_t *out, uint32_t n)
                 const uint32_t ts = TORQUE_SH[p_torque & 3u];
                 mot = ts ? mot + ((tr - mot) >> ts) + (tr > mot) - (tr < mot) : tr;
                 dk.rate = mot + rec_add;
-                if (dk.pos >= len || dk.pos < 0) dk.mode = DK_OFF;
+                if (dk.word == SURF_WORD) {         /* a tap: its zone, and with FLOW the crossfade into the next; ETERNAL: never stops */
+                    const uint32_t into = surf_base + (uint32_t)(dk.pos >> 16) - (dk.szone << ZSH);
+                    if (!(p_auto && p_surfmode) && into >= ZLEN + p_flow * 128u) dk.mode = DK_OFF;
+                }
+                else if (dk.pos >= len || dk.pos < 0) dk.mode = DK_OFF;
                 break;
             }
             case DK_FRZ: dk.rate = deck_speed(rate0, fx, amt) + rec_add; break;
@@ -820,8 +1185,10 @@ static void app_audio(int32_t *out, uint32_t n)
                     if (dk.ph >= (uint32_t)TECH[dk.tech].beats << 16) dk.ph = 0;
                 }
                 gate = (int32_t)tech_open(dk.tech, dk.ph);
-                target = (tech_pos(dk.tech, dk.ph) * (int32_t)(2600u + p_reach * 800u)) << 1;   /* Q16 */
+                if (dk.word == SURF_WORD) dk.anchor += (int32_t)(p_surf * 256u * (gblk >> 2));   /* SURF: the spot drifts on, p_surf x 256 samples a beat */
+                target = dk.anchor + ((tech_pos(dk.tech, dk.ph) * (int32_t)(2600u + p_reach * 800u)) << 1);   /* Q16 */
                 if (target > len) target = len;
+                if (target < 0) target = 0;
                 dk.rate = (target - dk.pos) / (int32_t)m;
                 break;
             }
@@ -834,10 +1201,13 @@ static void app_audio(int32_t *out, uint32_t n)
                 break;
             }
             case DK_HAND:
-                dk.rate = ((dk.hand - dk.pos) >> 2) / (int32_t)m;
-                if (dk.rate > 16 * rate0) dk.rate = 16 * rate0;
-                if (dk.rate < -16 * rate0) dk.rate = -16 * rate0;
+            {                                   /* the hand: 1/3 of the way each block (snappier), up to 16x (SURF 32x) */
+                const int32_t cap = (dk.word == SURF_WORD ? 32 : 16) * rate0;
+                dk.rate = ((dk.hand - dk.pos) / 3) / (int32_t)m;
+                if (dk.rate > cap) dk.rate = cap;
+                if (dk.rate < -cap) dk.rate = -cap;
                 break;
+            }
             case DK_SPIN:                                       /* the throw slows down */
                 dk.rate -= dk.rate >> 7;
                 if (dk.pos <= 0 || dk.rate > -(rate0 >> 3)) { dk.mode = DK_LET; gate = 0; }
@@ -870,11 +1240,27 @@ static void app_audio(int32_t *out, uint32_t n)
         /* ---- the deck: the sound */
         for (i = 0; i < m; i++) vbuf[i] = 0;
         if (dk.word >= 0 && !bank_busy && (dk.fader || ft)) {
-            const int8_t *w = wpool + bank[dk.word].off;
+            const int8_t *w = dk.word == SURF_WORD ? surf_buf : wpool + bank[dk.word].off;
             const int32_t len = (int32_t)bank[dk.word].len - 1, frz = dk.mode == DK_FRZ, tone = dk.mode == DK_TONE;
             const int32_t loopl = (int32_t)(bank[dk.word].loop ? bank[dk.word].loop : (uint32_t)len) << 16;
             int32_t pos = dk.pos, rate = dk.rate, fd = dk.fader, lg = lfo_g;
             const int32_t fast = rate > 65536 || rate < -65536;   /* over a word sample a frame: average what it passed */
+            if (dk.word == SURF_WORD) {                 /* the record under the needle this block: made if not yet */
+                int32_t a = pos >> 16, b = (pos + rate * (int32_t)m) >> 16, k;
+                if (a > b) { k = a; a = b; b = k; }
+                a -= 26; b += 2;
+                if (frz) { if (a > (dk.frz >> 16)) a = dk.frz >> 16; if (b < ((dk.frz + FRZ_WIN) >> 16) + 1) b = ((dk.frz + FRZ_WIN) >> 16) + 1; }
+                if (a < 0) a = 0;
+                if (b > (int32_t)SURF_WIN - 1) b = (int32_t)SURF_WIN - 1;
+                {   /* at most 3 a block (a jump lands on nothing made yet): the rest silent for now, made in the blocks after */
+                    uint32_t made = 0;
+                    for (k = a >> 8; k <= b >> 8 && a <= b; k++) {
+                        if (surf_ok[k]) continue;
+                        if (made++ < 3u) surf_tile((uint32_t)k);
+                        else { uint32_t j, *z = (uint32_t *)(surf_buf + (uint32_t)k * SURF_TILE); for (j = 0; j < SURF_TILE / 4u; j++) z[j] = 0; }
+                    }
+                }
+            }
             for (i = 0; i < m; i++) {
                 int32_t ip, s = 0;
                 if (frz && pos >= dk.frz + FRZ_WIN) pos -= FRZ_WIN;
@@ -954,9 +1340,25 @@ static void app_audio(int32_t *out, uint32_t n)
         }
         if (gt.env > 4096 || gt.envr > 4096 || bs.env > 4096) {
             const uint32_t bk = braking ? braking : 256u;       /* BRAKE: the band winds down with the turntable */
-            const uint32_t i0 = (gt.inc[0] >> 8) * bk, i1 = (gt.inc[1] >> 8) * bk;
+            uint32_t i0, i1;
             const uint32_t ib = (bs.inc >> 8) * bk;
             const int32_t gsh = gt.mute ? 13 : 15, bsh = bs.mute ? 11 : 14;
+            if (gt.inc[1] != gt.to && gt.lag <= 0) {            /* seasick: the second guitar slides down onto the first */
+                const int32_t dd = (int32_t)(gt.to - gt.inc[1]);
+                gt.inc[1] = dd > -64 && dd < 64 ? gt.to : gt.inc[1] + (uint32_t)(dd >> 6);
+            }
+            i0 = (gt.inc[0] >> 8) * bk; i1 = (gt.inc[1] >> 8) * bk;
+            if (gt.dive) {                                      /* the whammy: an octave down in ~0.4 s, then held */
+                if (gt.dv > 16384) gt.dv -= (gt.dv >> 8) + 1;
+                i0 = mulq15(i0, (uint32_t)gt.dv); i1 = mulq15(i1, (uint32_t)gt.dv);
+            }
+            if (gt.vib) {                                       /* the squeal: a 6 Hz finger vibrato, +-2 %, swelling in */
+                const int32_t dev = (sine(gt.vph) * (int32_t)gt.vib) >> 8;
+                gt.vph += 584353u * m;
+                if (gt.vib < 256u) gt.vib++;
+                i0 = (uint32_t)((int32_t)i0 + ((((int32_t)(i0 >> 10)) * dev) >> 15) * 20);
+                i1 = (uint32_t)((int32_t)i1 + ((((int32_t)(i1 >> 10)) * dev) >> 15) * 20);
+            }
             for (i = 0; i < m; i++) {
                 int32_t xl = 0, xr = 0, b2;
                 if (gt.env > 4096 && gt.pos[0] < gt.end[0]) {   /* L */
@@ -976,6 +1378,10 @@ static void app_audio(int32_t *out, uint32_t n)
                 bs.ph += ib; bs.sph += ib >> 1;
                 bs.lp += ((SAW(bs.ph) - bs.lp) * 2600) >> 15;
                 b2 = bs.lp + (sine(bs.sph) >> 1);               /* + the octave below, for headphones */
+                if (bs.clk > 4096) {                            /* the clank: the string slapping the frets, bright, ~8 ms */
+                    b2 += (SAW(bs.ph << 4) * (bs.clk >> 8)) >> 16;
+                    bs.clk -= bs.clk >> 8;
+                }
                 b2 = (b2 * (bs.env >> 8)) >> 15;
                 bs.env -= bs.env >> bsh;
                 bbuf[i] = (b2 * 3) >> 2;                        /* the bass in the middle */
@@ -1291,6 +1697,41 @@ static void draw_deck(int32_t w, uint32_t pos, uint32_t rot, uint32_t on, uint32
     cv_blit(0, 60);
 }
 
+/* SURF: the endless record as a landscape scrolling under the needle, five zones of it; each zone's envelope is a
+ * mountain in its material's colour, the 27 spots the keys play are marked, the surfer rides the needle */
+static const uint16_t ZCOL[Z_COUNT] = {RGB(255, 140, 0), RGB(0, 230, 255), RGB(220, 60, 255), RGB(150, 255, 0),
+                                       RGB(255, 220, 0), RGB(255, 50, 50), RGB(200, 210, 200)};
+static void draw_surf(uint32_t world, uint32_t abs, uint32_t rot, uint32_t on, uint32_t fader, uint16_t acc)
+{
+    const uint32_t SPX = 256u, n0 = abs - 80u * SPX;
+    uint32_t x, zc = ~0u;
+    int32_t hn = 0;
+    zone_t zp;
+    cv_begin(240, 64, C_BLACK);
+    platter(34, 32, rot, on, fader, acc);
+    {
+        const int32_t h = dk_speed_v > 64u ? 60 : (int32_t)(dk_speed_v * 60u / 64u);
+        cv_rect(69, 2, 3, 60, C_DEEP);
+        cv_rect(69, 62 - h, 3, h, h > 30 ? C_PINK : h > 15 ? C_YEL : C_CYAN);
+    }
+    for (x = 0; x < 160u; x++) {
+        const uint32_t n = n0 + x * SPX, z = n >> ZSH, t = n & (ZLEN - 1u);
+        int32_t h;
+        if (z != zc) { zc = z; zone_of(world, z, &zp); }
+        h = zone_env_flow(&zp, t, p_flow) * 40 >> 15;
+        if (h && (zp.mat == Z_HISS || zp.mat == Z_CHAOS || zp.mat == Z_BYTE)) h -= (int32_t)(hsh(n >> 8) & 3u);   /* rough ground */
+        if (h < 1) h = t < zone_len(&zp, p_flow) ? 1 : 0;
+        if (h) cv_rect(76 + (int32_t)x, 60 - h, 1, h, ZCOL[zp.mat]);
+        if (t < SPX) cv_rect(76 + (int32_t)x, 61, 1, 3, z < NSURFK ? C_YEL : C_DEEP);   /* a zone starts: yellow = a key */
+        if (x == 80u) hn = h;
+    }
+    cv_rect(76, 60, 160, 1, C_DEEP);
+    cv_rect(156, 0, 1, 60 - hn - 4, on ? (fader > 16000u ? C_TXT : C_PINK) : C_GRY);   /* the needle */
+    cv_rect(151, 60 - hn - 4, 11, 2, on ? C_YEL : C_GRY);                            /* the surfer's board */
+    cv_rect(155, 60 - hn - 9, 3, 5, on ? C_TXT : C_GRY);
+    cv_blit(0, 60);
+}
+
 static void draw_pads(const uint32_t *hit_t, uint32_t now)   /* BEAT mode: the kit as 12 pads that flash */
 {
     static const char *const PAD[NDRUM] = {"KICK", "SNARE", "CLAP", "HAT", "OPEN", "RIM", "LTOM", "HTOM", "808", "CHINA", "ZAP", "CRASH"};
@@ -1424,8 +1865,8 @@ static int32_t chip(int32_t x, const char *s, uint32_t on, uint16_t c)
     cv_text(x + 3, 4, &FONT_S, s, on ? C_BLACK : C_GRY);
     return x + w + 3;
 }
-static const char *const MODE_NAME[3] = {"DJ", "BEAT", "TONE"};
-enum { M_DJ, M_BEAT, M_TONE };
+static const char *const MODE_NAME[4] = {"DJ", "BEAT", "TONE", "SURF"};
+enum { M_DJ, M_BEAT, M_TONE, M_SURF, M_COUNT };
 static void draw_chips(uint32_t rec, uint32_t aut, uint32_t rap, uint32_t mode, uint32_t lfo, uint32_t ham, int32_t semi)
 {
     char p[6] = "P", *q = p + 1;
@@ -1435,7 +1876,7 @@ static void draw_chips(uint32_t rec, uint32_t aut, uint32_t rap, uint32_t mode, 
     x = chip(x, "REC", rec, C_RED);
     x = chip(x, "RAP", rap, C_YEL);
     x = chip(x, "AUTO", aut, C_CYAN);
-    x = chip(x, MODE_NAME[mode], 1, mode == M_TONE ? C_YEL : C_MID);
+    x = chip(x, MODE_NAME[mode], 1, mode == M_TONE ? C_YEL : mode == M_SURF ? C_CYAN : C_MID);
     x = chip(x, ham ? "HAM" : "LFO", ham ? 1u : lfo, ham ? C_RED : C_PINK);
     if (ham) x = chip(x, "LFO", lfo, C_PINK);
     if (x + 40 <= 240) chip(x, p, semi != 0, C_TXT);
@@ -1451,6 +1892,7 @@ static void draw_chips(uint32_t rec, uint32_t aut, uint32_t rap, uint32_t mode, 
 static const char *const DROP_NAME[13] = {"F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F"};
 static int32_t clampi(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 static void deck_cmd(uint32_t kind, uint32_t arg) { cmd_arg = arg; cmd_kind = kind; cmd_n++; }
+#define WNOTE(w) (48u + (uint32_t)((w) >= SURF_KEY ? (w) - SURF_KEY : (w)))   /* a key's MIDI note out: a word or a SURF spot */
 static void drums_now(uint32_t mask) { drum_mask = mask; drum_n++; }
 /* General MIDI drum notes 35..59 (channel 10) -> the pads, so an e-kit plays them (Roland TD-8 defaults:
  * kick 36, snare 38 / rim 40, toms 48 45 43 41 (rims 50 47 58 39), hats 42 46 44, crash 49 / 57, ride 51 / bell 53) */
@@ -1484,7 +1926,7 @@ static void app_main(void)
     struct {                                    /* what survives a power-off */
         uint8_t fx, amt[FX_COUNT], echo, etime, style, reach, voice, groove, hard, beat, aut, swing, tune, decay, dlvl, vlvl, sync;
         uint8_t rap, glvl, hook, pad2;
-        uint8_t lfo_on, lfo_rate, lfo_shape, lfo_depth, lfo_dest, curve, torque, hamster, tsrc, space, blvl, width, ver, pad3[3];
+        uint8_t lfo_on, lfo_rate, lfo_shape, lfo_depth, lfo_dest, curve, torque, hamster, tsrc, space, blvl, width, ver, world, surf, flow;
         int8_t semi, pad;
         uint16_t bpm;
         int8_t word[16];
@@ -1508,8 +1950,8 @@ static void app_main(void)
     for (k = 0; k < FX_COUNT; k++) set.amt[k] = 7;
     set.echo = 3; set.etime = 2; set.reach = 3; set.groove = 1; set.hard = 1; set.bpm = 100;
     set.glvl = 11; set.hook = ADLIB;
-    set.lfo_rate = 6; set.lfo_depth = 8; set.torque = 3; set.space = 7; set.blvl = 11; set.width = 15; set.ver = 2;
-    set.tune = 6; set.decay = 2; set.dlvl = 12; set.vlvl = 12;
+    set.lfo_rate = 6; set.lfo_depth = 8; set.torque = 3; set.space = 7; set.blvl = 11; set.width = 15; set.ver = 4; set.flow = 12;
+    set.tune = 4; set.decay = 2; set.dlvl = 12; set.vlvl = 12; set.surf = 4;
     for (s = 0; s < 16u; s++) set.word[s] = -1;
     settings_load(&set, sizeof set);
     set.fx %= FX_COUNT; set.style %= SC_COUNT; set.voice %= NVOICES; set.groove %= NGROOVES; set.etime &= 3u;
@@ -1523,11 +1965,16 @@ static void app_main(void)
     if (set.vlvl > 15u) set.vlvl = 12;
     if (set.glvl > 15u) set.glvl = 11;
     if (set.hook >= NKEYW) set.hook = ADLIB;
-    set.beat %= 3u; set.lfo_on = set.lfo_on ? 1u : 0u; set.lfo_rate %= NLFO_RATE; set.lfo_shape %= LS_COUNT;
+    set.beat %= M_COUNT; set.lfo_on = set.lfo_on ? 1u : 0u; set.lfo_rate %= NLFO_RATE; set.lfo_shape %= LS_COUNT;
     set.lfo_depth &= 15u; set.lfo_dest %= LD_COUNT; set.curve %= 3u; set.torque &= 3u; set.hamster = set.hamster ? 1u : 0u;
     set.tsrc %= NTSRC;
     if (set.space > 15u) set.space = 7;
-    if (set.ver != 2u) { set.blvl = 11; set.width = 15; set.ver = 2; }   /* saved before the MIXER */
+    if (set.ver < 2u || set.ver > 4u) { set.blvl = 11; set.width = 15; set.ver = 2; }   /* saved before the MIXER */
+    if (set.ver == 2u) { set.world = 0; set.surf = 4; set.tune = 4; set.ver = 3; }   /* saved before 3.0: SURF, and the 7-string in A */
+    if (set.ver == 3u) { set.flow = 12; set.ver = 4; }                                /* saved before FLOW */
+    if (set.flow > 15u) set.flow = 12;
+    if (set.world > 99u) set.world = 0;
+    if (set.surf > 15u) set.surf = 4;
     if (set.blvl > 15u) set.blvl = 11;
     if (set.width > 15u) set.width = 15;
     set.rap = set.rap ? 1u : 0u;
@@ -1535,7 +1982,7 @@ static void app_main(void)
     set.semi = (int8_t)clampi(set.semi, -12, 12);
     set.bpm = (uint16_t)clampi(set.bpm, 60, 180);
     for (s = 0; s < 16u; s++) {
-        if (set.word[s] >= NKEYW) set.word[s] = -1;
+        if (set.word[s] >= NKEYW && (set.word[s] < SURF_KEY || set.word[s] >= SURF_KEY + NSURFK)) set.word[s] = -1;
         seq_word[s] = set.word[s]; seq_flag[s] = set.flag[s]; seq_drum[s] = set.drum[s] & 0x0FFFu;
         rap_line[s] = -1;
     }
@@ -1566,8 +2013,10 @@ static void app_main(void)
     draw_text_box(0, 84, 240, &FONT_L, "SKRATCH", C_CYAN, 1);
     draw_text_box(0, 116, 240, &FONT_L, "MASTER", C_CYAN, 1);
     draw_text_box(0, 150, 240, &FONT_L, "PRO", C_YEL, 1);
-    draw_text_box(0, 190, 240, &FONT_S, "tuning down to B", C_GRY, 1);
+    draw_text_box(0, 190, 240, &FONT_S, "7 strings down to A", C_GRY, 1);
+    draw_text_box(0, 210, 240, &FONT_S, "INFINITE SKRATCH", C_YEL, 1);
     make_tones();
+    bank[SURF_WORD].off = 0; bank[SURF_WORD].len = SURF_WIN - 64u; bank[SURF_WORD].loop = 0;   /* the window, read like a word */
     render_bank(set.voice);
     deck_cmd(CMD_SAY, NAME_WORD);               /* it says its name */
     lcd_fill(0, 0, 240, 240, C_BLACK);
@@ -1622,15 +2071,21 @@ static void app_main(void)
                     t_boost = now;
                 } else {
                     const int32_t av = jog_v < 0 ? -jog_v : jog_v;
-                    p_jog_gain = av * 10 + 100 > 1600 ? 1600 : av * 10 + 100;
+                    {   /* samples a click: slow = fine control, fast = big throws; SURF moves 2.5x (its zones are long) */
+                        const int32_t sf = set.beat == M_SURF ? 5 : 2, g = (av * 12 + 120) * sf;
+                        p_jog_gain = g > 2000 * sf ? 2000 * sf : g;
+                    }
                     jog_total += e; jog_held = 1;
                 }
-            } else if (jog_held && now - t_jog > ((jog_v > 12 || jog_v < -12) ? 60u : 300u)) {   /* let go: a fast flick throws the record */
+            } else if (jog_held && now - t_jog > ((jog_v > 8 || jog_v < -8) ? 60u : 300u)) {   /* let go: a fast flick throws the record */
                 const int32_t av = jog_v < 0 ? -jog_v : jog_v;
                 jog_held = 0;
-                if (av > 12) {
+                if (av > 8) {
                     int32_t r = jog_v * p_jog_gain * 3 / 2;      /* clicks/s * samples/click / 44100 * 65536 */
-                    r = r > 16 * p_rate ? 16 * p_rate : r < -16 * p_rate ? -16 * p_rate : r;
+                    {
+                        const int32_t tc = (set.beat == M_SURF ? 32 : 16) * p_rate;
+                        r = r > tc ? tc : r < -tc ? -tc : r;
+                    }
                     p_throw_rate = r;
                     p_throw++;
                 }
@@ -1652,7 +2107,8 @@ static void app_main(void)
                 knobs = dirty = 1;
             }
             if (!pro && (e = fm1_enc_take(ENC_KNOB2)) != 0) {
-                if (shift) { set.echo = (uint8_t)clampi(set.echo + e, 0, 15); put_u(v, set.echo); TOAST("ECHO", v); }
+                if (shift && set.beat == M_SURF) { set.flow = (uint8_t)clampi(set.flow + e, 0, 15); put_u(v, set.flow); TOAST("FLOW", v); }   /* ECHO is on the MIXER */
+                else if (shift) { set.echo = (uint8_t)clampi(set.echo + e, 0, 15); put_u(v, set.echo); TOAST("ECHO", v); }
                 else { set.glvl = (uint8_t)clampi(set.glvl + e, 0, 15); put_u(v, set.glvl); TOAST("GUITAR", v); }
                 knobs = dirty = 1;
             }
@@ -1662,7 +2118,9 @@ static void app_main(void)
                 knobs = dirty = 1;
             }
             if (!pro && (e = fm1_enc_take(ENC_KNOB4)) != 0) {
-                if (shift) { set.dlvl = (uint8_t)clampi(set.dlvl + e, 0, 15); put_u(v, set.dlvl); TOAST("DRUMS", v); }
+                if (set.beat == M_SURF && shift) { set.surf = (uint8_t)clampi(set.surf + e, 0, 15); put_u(v, set.surf); TOAST("SURF", v); }
+                else if (set.beat == M_SURF) { set.world = (uint8_t)clampi(set.world + e, 0, 99); put_u(v, set.world); TOAST("WORLD", v); }
+                else if (shift) { set.dlvl = (uint8_t)clampi(set.dlvl + e, 0, 15); put_u(v, set.dlvl); TOAST("DRUMS", v); }
                 else { set.voice = (uint8_t)clampi(set.voice + e, 0, NVOICES - 1); voice_pending = 1; t_voice = now; TOAST("", VOICES[set.voice].name); }
                 knobs = dirty = 1;
             }
@@ -1704,7 +2162,7 @@ static void app_main(void)
             if (b & (1u << BTN_GLO)) { set.aut = !set.aut; chips = dirty = 1; TOAST("AUTO", set.aut ? "ON" : "OFF"); }
             if (b & (1u << BTN_FX)) { fx_held = 1; fx_turned = 0; t_fx = now; knobs = 1; deck_view = ~0u; }
             if (b & (1u << BTN_HOME)) {
-                set.beat = (uint8_t)((set.beat + 1u) % 3u); chips = knobs = dirty = 1; deck_view = ~0u;
+                set.beat = (uint8_t)((set.beat + 1u) % M_COUNT); chips = knobs = dirty = 1; deck_view = ~0u; word_drawn = -2;
                 if (tone_on) { deck_cmd(CMD_TONE_OFF, 0); tone_on = 0; }
                 TOAST("", MODE_NAME[set.beat]);
             }
@@ -1752,6 +2210,7 @@ static void app_main(void)
         p_groove = set.groove; p_hard = set.hard; p_auto = set.aut; p_play = play; p_swing = set.swing;
         p_tune = set.tune; p_decay = set.decay; p_dlvl = set.dlvl; p_vlvl = set.vlvl;
         p_glvl = set.glvl; p_rap = set.rap; p_hook = set.hook; p_etime = 2;
+        p_world = set.world; p_surf = set.surf; p_flow = set.flow; p_surfmode = set.beat == M_SURF;
         p_cut = btn >> BTN_LFO & 1u && shift;      /* EDIT + LFO held: the crossfader on 32nds */
         p_freeze = (btn >> BTN_ENV & 1u && !shift) || frz_latch;
         p_drop = btn >> BTN_SEL & 1u && !shift;
@@ -1785,7 +2244,8 @@ static void app_main(void)
             }
             for (k = 0; k < 27u && set.beat != M_TONE; k++) {
                 int32_t w = -1, dr_i = -1;
-                if (set.beat) { if (k < 12u) dr_i = (int32_t)k; else w = (int32_t)k - 12; }
+                if (set.beat == M_BEAT) { if (k < 12u) dr_i = (int32_t)k; else w = (int32_t)k - 12; }
+                else if (set.beat == M_SURF) w = SURF_KEY + (int32_t)k;   /* SURF: the keys are 27 spots on the endless record */
                 else w = (int32_t)k;
                 if (down >> k & 1u) {
                     t_down[k] = now; scr[k] = 0; qstep[k] = q;
@@ -1795,7 +2255,7 @@ static void app_main(void)
                     } else {
                         const uint32_t gap = now - t_tap;
                         held_word[k] = w;
-                        last_word = (uint32_t)w;
+                        if (w < SURF_KEY) last_word = (uint32_t)w;
                         if (w == last_tap_w && gap < 450u && shift) {          /* EDIT + taps: pump the FX */
                             fx_boost += (int32_t)(256u * 600u / (gap < 60u ? 60u : gap));
                             t_boost = now;
@@ -1812,11 +2272,11 @@ static void app_main(void)
                         } else {
                             tap_n = 0;
                             deck_cmd(CMD_SAY, (uint32_t)w);
-                            if (set.rap && set.hook != (uint8_t)w) { set.hook = (uint8_t)w; dirty = 1; t_change = now; }   /* the hook */
+                            if (set.rap && w < SURF_KEY && set.hook != (uint8_t)w) { set.hook = (uint8_t)w; dirty = 1; t_change = now; }   /* the hook */
                         }
                         last_tap_w = w;
                         t_tap = now;
-                        out_msg(0x90, 48u + (uint32_t)w, 110);
+                        out_msg(0x90, WNOTE(w), 110);
                         if (rec && play) { seq_word[q] = (int8_t)w; seq_flag[q] = 0; if (late) seq_skip[q] = 1; dirty = 1; }
                     }
                 }
@@ -1830,7 +2290,7 @@ static void app_main(void)
                 }
                 if (up >> k & 1u) {
                     if (scr[k] == 1u) deck_cmd(CMD_LET, 0);
-                    if (held_word[k] >= 0) out_msg(0x80, 48u + (uint32_t)held_word[k], 0);
+                    if (held_word[k] >= 0) out_msg(0x80, WNOTE(held_word[k]), 0);
                     held_word[k] = -1;
                     scr[k] = 0;
                 }
@@ -1890,6 +2350,7 @@ static void app_main(void)
             for (k = 0; k < 27u; k++) {
                 lit = keys >> k & 1u;
                 if (set.beat == M_TONE) {}
+                else if (set.beat == M_SURF) lit |= dk_on_v && dk_word_v == SURF_WORD && surf_abs_v >> ZSH == k;   /* the spot the needle is on */
                 else if (set.beat && k < 12u) lit |= now - hit_t[k] < 80u;
                 else if (dk_on_v && held_word[k] < 0) lit |= (set.beat ? (int32_t)k - 12 : (int32_t)k) == dk_word_v;
                 fm1_led_key(KEY_LED(k), lit);
@@ -1948,7 +2409,18 @@ static void app_main(void)
                 if (word_drawn != -3 || toast_on == 1) { draw_big(toast[0] == ' ' ? toast + 1 : toast, C_YEL); word_drawn = -3; toast_on = 2; }
             } else {
                 toast_on = 0;
-                if (dk_word_v != word_drawn) { word_drawn = dk_word_v; draw_big(word_drawn >= 0 ? SHOW[word_drawn] : "", acc); }
+                if (dk_word_v == SURF_WORD) {           /* the record: what this zone is made of, and which */
+                    const uint32_t z = surf_abs_v >> ZSH;
+                    zone_t zp;
+                    zone_of(set.world, z, &zp);
+                    if (word_drawn != (int32_t)(1000u + (z & 0xFFFFFu) * 8u + zp.mat)) {
+                        char b2[20], *p2 = put(b2, ZNAME[zp.mat]);
+                        word_drawn = (int32_t)(1000u + (z & 0xFFFFFu) * 8u + zp.mat);
+                        p2 = put(p2, " ");
+                        put_u(p2, z);
+                        draw_big(b2, ZCOL[zp.mat]);
+                    }
+                } else if (dk_word_v != word_drawn) { word_drawn = dk_word_v; draw_big(word_drawn >= 0 ? SHOW[word_drawn] : "", acc); }
             }
 
             /* the middle: the deck (DJ), the pads (BEAT), or the button map (EDIT held) */
@@ -1977,6 +2449,10 @@ static void app_main(void)
             }
             else if (now - t_draw >= 33u || deck_view == ~0u || deck_view >= 3u) {
                 if (set.beat == M_BEAT) { draw_pads(hit_t, now); deck_view = 1u; t_draw = now; }
+                else if (!dk_scr_v && (dk_word_v == SURF_WORD || (set.beat == M_SURF && dk_word_v < 0))) {   /* the landscape */
+                    draw_surf(set.world, dk_word_v == SURF_WORD ? surf_abs_v : 2u * ZLEN, dk_rot_v, dk_on_v, dk_fader_v, acc);
+                    deck_view = 0u; t_draw = now;
+                }
                 else if (dk_on_v || play || jog_held || deck_view != 0u) {
                     draw_deck(dk_word_v, dk_pos_v, dk_rot_v, dk_on_v, dk_fader_v, acc);
                     deck_view = 0u; t_draw = now;
@@ -2011,17 +2487,20 @@ static void app_main(void)
                     a[0].label = FX_NAME[set.fx]; put_u(a[0].val, p_amt); a[0].bar = p_amt; a[0].of = 15;
                     a[1].label = "GUITAR"; put_u(a[1].val, set.glvl); a[1].bar = set.glvl; a[1].of = 15;
                     a[2].label = "BPM"; put_u(a[2].val, set.bpm); a[2].bar = set.bpm - 60u; a[2].of = 120;
-                    a[3].label = "VOICE"; put(a[3].val, VOICES[set.voice].name); a[3].bar = 0; a[3].of = 0;
+                    if (set.beat == M_SURF) { a[3].label = "WORLD"; put_u(a[3].val, set.world); a[3].bar = set.world; a[3].of = 99; }
+                    else { a[3].label = "VOICE"; put(a[3].val, VOICES[set.voice].name); a[3].bar = 0; a[3].of = 0; }
                     c[0].label = "JOG"; put(c[0].val, "VELOCITY"); c[0].of = 0;
                     if (set.beat == M_TONE) { c[1].label = "SOURCE"; put(c[1].val, TSRC_NAME[set.tsrc]); }
                     else { c[1].label = "STYLE"; put(c[1].val, set.style == SC_HYDRO ? "HYDRO" : SC_NAME[set.style]); }
                     c[1].of = 0;
-                    c[2].label = "GROOVE"; put(c[2].val, GROOVES[set.groove].name); c[2].of = 0;
+                    c[2].label = "GROOVE"; put(c[2].val, set.groove == 1u ? "BRUTAL" : GROOVES[set.groove].name);   /* the cell holds 11 */ c[2].of = 0;
                 } else {
                     a[0].label = "DROP"; put(a[0].val, DROP_NAME[set.tune]); a[0].bar = set.tune; a[0].of = 12;
-                    a[1].label = "ECHO"; put_u(a[1].val, set.echo); a[1].bar = set.echo; a[1].of = 15;
+                    if (set.beat == M_SURF) { a[1].label = "FLOW"; put_u(a[1].val, set.flow); a[1].bar = set.flow; a[1].of = 15; }
+                    else { a[1].label = "ECHO"; put_u(a[1].val, set.echo); a[1].bar = set.echo; a[1].of = 15; }
                     a[2].label = "DECAY"; put_s(a[2].val, (int32_t)set.decay - 2); a[2].bar = set.decay; a[2].of = 4;
-                    a[3].label = "DRUMS"; put_u(a[3].val, set.dlvl); a[3].bar = set.dlvl; a[3].of = 15;
+                    if (set.beat == M_SURF) { a[3].label = "SURF"; put_u(a[3].val, set.surf); a[3].bar = set.surf; a[3].of = 15; }
+                    else { a[3].label = "DRUMS"; put_u(a[3].val, set.dlvl); a[3].bar = set.dlvl; a[3].of = 15; }
                     c[0].label = "VEL FX"; put(c[0].val, "FLICK"); c[0].of = 0;
                     c[1].label = "SWING"; put_u(c[1].val, set.swing * 10u); c[1].bar = set.swing; c[1].of = 10;
                     c[2].label = "REACH"; put_u(c[2].val, set.reach + 1u); c[2].bar = set.reach; c[2].of = 7;

@@ -126,13 +126,62 @@
       background: repeating-linear-gradient(90deg, var(--bone) 0 2px, transparent 2px 4px, var(--bone) 4px 5px, transparent 5px 9px, var(--bone) 9px 12px, transparent 12px 13px, var(--bone) 13px 14px, transparent 14px 18px); }
   .code { letter-spacing: 6px; color: var(--bone); margin: 0 0 22px; }
 
+  /* the 3.0 fire badge */
+  .fire { position: relative; display: inline-flex; align-items: flex-end; gap: 10px; margin: 0 0 12px; text-decoration: none;
+      pointer-events: auto; color: var(--bone); }
+  .fire:hover { color: var(--bone); }
+  .fire .burn { position: relative; width: clamp(72px, 9vw, 104px); aspect-ratio: 100 / 120; flex: none;
+      filter: drop-shadow(0 0 10px rgba(255,120,20,.55)) drop-shadow(0 0 26px rgba(192,50,29,.5)); }
+  .fire svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .fire svg path { transform-box: fill-box; transform-origin: 50% 100%; }
+  .fire .f1 { animation: flick 1.3s ease-in-out infinite alternate; }
+  .fire .f2 { animation: flick 0.9s ease-in-out -0.4s infinite alternate-reverse; }
+  .fire .f3 { animation: flick 0.7s ease-in-out -0.2s infinite alternate; }
+  .fire b { position: absolute; left: 0; right: 0; bottom: 9%; text-align: center; font: 400 clamp(24px, 3.2vw, 36px)/1 var(--block);
+      color: var(--ink); letter-spacing: 0; text-shadow: 0 0 6px rgba(255,240,180,.9); }
+  .fire .lbl { font: 400 clamp(17px, 2.2vw, 24px)/1 var(--hand); background: var(--rust); color: var(--bone); padding: 6px 12px 5px;
+      transform: rotate(-3deg) translateY(-10px); box-shadow: 3px 3px 0 #000; white-space: nowrap; }
+  .fire .lbl small { display: block; font: 13px var(--type); letter-spacing: 2px; color: var(--tape); margin-top: 3px; }
+  @keyframes flick {
+    0%   { transform: scale(1, 1) skewX(0deg); }
+    35%  { transform: scale(.96, 1.06) skewX(-3deg); }
+    70%  { transform: scale(1.03, .95) skewX(2deg); }
+    100% { transform: scale(.98, 1.08) skewX(-1deg); }
+  }
+  .tape .hot { color: var(--rust); }
+
+  /* new in 3.0 */
+  .feats { list-style: none; margin: 0 0 34px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 44px; }
+  .feats li { position: relative; padding: 11px 0 11px 30px; border-bottom: 1px dashed #4a443c; font-size: 15px; color: #cfc6b1; }
+  .feats li::before { content: "\25B6"; position: absolute; left: 2px; top: 13px; font-size: 13px; color: var(--rust); }
+  .feats li b { display: block; font: 400 21px/1.15 var(--block); letter-spacing: .5px; color: var(--bone); margin-bottom: 2px; }
+  .mats { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 30px; padding: 0; list-style: none; }
+  .mats li { font: 400 17px/1 var(--block); letter-spacing: 1px; padding: 7px 10px 5px; background: #000; border: 2px solid currentColor; }
+  .mats li em { font: 12px var(--type); font-style: normal; color: var(--fade); margin-left: 6px; letter-spacing: 0; }
+
+  /* quick start */
+  .qs { display: grid; grid-template-columns: 1.3fr 1fr; gap: 40px; align-items: start; }
+  kbd { font: 400 15px/1 var(--block); letter-spacing: 1px; background: var(--ink); color: var(--bone); padding: 3px 7px 2px;
+      border-radius: 2px; box-shadow: 0 2px 0 #000; white-space: nowrap; }
+  .manual { display: block; text-decoration: none; background: var(--ink); color: var(--bone); padding: 24px 24px 20px;
+      transform: rotate(-.8deg); box-shadow: 6px 6px 0 rgba(0,0,0,.35); }
+  .manual:hover { color: var(--bone); background: var(--blood); }
+  .manual b { display: block; font: 400 clamp(34px, 5vw, 48px)/1 var(--block); letter-spacing: 1px; }
+  .manual b i { font-style: normal; color: var(--rust); }
+  .manual:hover b i { color: var(--tape); }
+  .manual span { display: block; font-size: 14px; color: var(--fade); margin-top: 10px; }
+  .manual + .manual { margin-top: 22px; transform: rotate(.6deg); background: var(--rust); }
+  .manual + .manual span { color: var(--bone); }
+  .manual + .manual:hover { background: var(--blood); }
+
   @media (max-width: 760px) {
-    .install, .sides { grid-template-columns: 1fr; }
+    .install, .sides, .feats, .qs { grid-template-columns: 1fr; }
     .photos { grid-template-columns: 1fr 1fr; }
     .photo:nth-child(3) { display: none; }
     td:first-child { white-space: normal; }
+    .fire .lbl { white-space: normal; }
   }
-  @media (prefers-reduced-motion: reduce) { .meter i { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .meter i { transition: none; } .fire path { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -142,9 +191,25 @@
   <div class="readout" id="readout">FM-1 CUSTOM FIRMWARE &middot; <b>SIDE A</b></div>
   <button class="snd" id="snd" aria-pressed="false" hidden>&#9654; hear the cuts</button>
   <div class="over">
-    <p class="kicker">for the M-VAVE FM-1 &middot; v<span id="ver">2.1</span> &middot; GPL-3</p>
+    <a class="fire" href="#new" aria-label="New in version 3.0: INFINITE SKRATCH">
+      <span class="burn" aria-hidden="true">
+        <svg viewBox="0 0 100 120">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#7a170e"/><stop offset=".55" stop-color="#c0321d"/><stop offset="1" stop-color="#ff5a1f" stop-opacity=".85"/></linearGradient>
+            <linearGradient id="g2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e2541b"/><stop offset="1" stop-color="#ff9a2a"/></linearGradient>
+            <linearGradient id="g3" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff6d8"/><stop offset=".6" stop-color="#ffd84a"/><stop offset="1" stop-color="#ffb02a"/></linearGradient>
+          </defs>
+          <path class="f1" fill="url(#g1)" d="M50 119C21 119 5 99 8 74 10 56 24 46 25 22 38 33 42 46 40 58 48 44 55 26 49 1 74 18 93 47 92 77 91 101 76 119 50 119Z"/>
+          <path class="f2" fill="url(#g2)" d="M50 119C30 119 18 106 19 88 20 72 33 64 34 46 44 56 46 66 45 74 52 64 58 50 55 32 72 47 82 66 81 87 80 106 68 119 50 119Z"/>
+          <path class="f3" fill="url(#g3)" d="M50 119C36 119 28 110 29 98 30 86 39 80 41 68 48 76 50 82 49 90 55 84 59 76 58 64 69 76 73 88 71 100 69 112 61 119 50 119Z"/>
+        </svg>
+        <b>3.0</b>
+      </span>
+      <span class="lbl">INFINITE SKRATCH<small>NEW &middot; SEE WHAT BURNS &darr;</small></span>
+    </a>
+    <p class="kicker">for the M-VAVE FM-1 &middot; v<span id="ver">3.0</span> &middot; GPL-3</p>
     <h1><span class="nu">NU//METAL</span><span class="sk">Skratchmaster</span><span class="stamp">PRO</span></h1>
-    <p class="sub">A robot turntablist and a drop-tuned band in a pocket synth. Plug it in, drop the needle, flash it from this page.</p>
+    <p class="sub">A robot turntablist, an endless record and a 7-string band in a pocket synth. Plug it in, drop the needle, flash it from this page.</p>
   </div>
 </section>
 
@@ -177,6 +242,68 @@
   </div>
 </section>
 
+<section class="dark" id="new">
+  <div class="wrap">
+    <h2 class="tape">NEW IN <span class="hot">3.0</span>: INFINITE SKRATCH</h2>
+    <p class="blurb">The FM-1 only has room for tiny samples, so 3.0 stops storing the record. In SURF mode the deck plays an endless record that is
+      computed as you scratch it, from where the needle is and which WORLD you're in. Scratch back over a spot and it's the same sound again, like vinyl.
+      Behind it, the band got heavier.</p>
+
+    <div class="photos">
+      <figure class="photo"><img src="img/surf-landscape.png" alt="SURF mode: the record drawn as a colored landscape scrolling under the needle"><figcaption>SURF: the record as a landscape, the needle on CHIRP 35</figcaption></figure>
+      <figure class="photo"><img src="img/eternal-skratch.png" alt="ETERNAL SKRATCH: AUTO and SURF lit, the robot riding CHAOS 16"><figcaption>ETERNAL SKRATCH: the robot rides it forever</figcaption></figure>
+      <figure class="photo"><img src="img/splash-3.png" alt="The 3.0 start screen: 7 strings down to A, INFINITE SKRATCH"><figcaption>7 strings down to A</figcaption></figure>
+    </div>
+
+    <ul class="feats">
+      <li><b>SURF MODE</b>A fourth HOME mode. The keys are 27 spots on an endless record; tap one to play its zone, hold it to scratch there in the STYLE.</li>
+      <li><b>SEVEN MATERIALS</b>Every 0.74 s zone is built one of seven ways, each with an attack, a body and a gap of crackle, like a battle record.</li>
+      <li><b>100 WORLDS</b>KNOB4 picks a different record. Each world leans on three materials, and turning it mid-sound morphs what's under the needle.</li>
+      <li><b>FLOW</b>EDIT + KNOB2. At 0 it's a battle record with gaps; from 10 up the gaps close and zones crossfade, so the record is one continuous landscape.</li>
+      <li><b>SURF DRIFT</b>EDIT + KNOB4. A held scratch wanders along the record while it loops, so a hold travels instead of sitting on one spot.</li>
+      <li><b>ETERNAL SKRATCH</b>GLO (AUTO) in SURF mode: the robot rides the record by itself, scratching, coasting and skipping waves. It doesn't repeat.</li>
+      <li><b>THE LANDSCAPE SCREEN</b>Zones scroll by as mountains in their material's color, the key spots are marked in yellow, and a little surfer rides the needle.</li>
+      <li><b>A HOTTER JOG</b>About 2.5x further per click, 2.5x more again in SURF, a snappier hand and easier throws. Flick it and coast through zone after zone.</li>
+      <li><b>7-STRING DROP A</b>A new guitar take: a hotter three-stage amp, a deep mid scoop, a thump at 100 Hz, and root + octave chugs that slam shut.</li>
+      <li><b>DIVES + SQUEALS</b>Whammy dives (an octave down in a quarter second) and pinch-harmonic squeals with finger vibrato, usable in any riff.</li>
+      <li><b>FOUR NEW GROOVES</b>BRUTAL TRUTH (grind blast), BAD DAY (half time), SEASICK (the second guitar a half step sharp, sliding down, the bass clanking) and DIVEBOMB.</li>
+      <li><b>MIDI CLOCK OVER TRS</b>With SYNC on FOLLOW the FM-1 locks to clock, Start and Stop on the TRS jack as well as USB.</li>
+    </ul>
+
+    <ul class="mats" aria-label="The seven materials">
+      <li style="color:#ff8c00">AHHH<em>FOF vowels</em></li>
+      <li style="color:#00e6ff">CHIRP<em>sweeps, lasers</em></li>
+      <li style="color:#dc3cff">FM<em>bells, screeches</em></li>
+      <li style="color:#96ff00">BYTE<em>bytebeat</em></li>
+      <li style="color:#ffdc00">DUST<em>SAM grains</em></li>
+      <li style="color:#ff3232">CHAOS<em>logistic map</em></li>
+      <li style="color:#c8d2c8">HISS<em>resonant noise</em></li>
+    </ul>
+    <p class="fine" style="color:var(--fade)">Your saved 2.x settings carry over. The first boot of 3.0 sets the tuning to drop A once.</p>
+  </div>
+</section>
+
+<section class="paper" id="start">
+  <div class="wrap qs">
+    <div>
+      <h2 class="tape">QUICK START</h2>
+      <ol class="steps">
+        <li><b>Install</b> from the box above. The FM-1 restarts on the 3.0 splash.</li>
+        <li>Press <kbd>PLAY</kbd>, then <kbd>ARP</kbd>. The band kicks in and the robot raps. Turn <kbd>PRESETS</kbd> for the groove: try BRUTAL TRUTH or SEASICK.</li>
+        <li>Press <kbd>HOME</kbd> until the chip says <b>SURF</b> (DJ, BEAT, TONE, SURF).</li>
+        <li><b>Tap</b> a key to play a zone, <b>hold</b> it to scratch there. <kbd>ALGORITHM</kbd> picks the STYLE.</li>
+        <li>Turn <kbd>SELECT</kbd> to surf the record by hand. Flick it and let go to coast.</li>
+        <li><kbd>KNOB4</kbd> = WORLD. Hold <kbd>EDIT</kbd>: <kbd>KNOB2</kbd> = FLOW, <kbd>KNOB4</kbd> = SURF drift.</li>
+        <li>Tap <kbd>GLO</kbd> for ETERNAL SKRATCH, then take your hands off.</li>
+      </ol>
+    </div>
+    <div>
+      <a class="manual" href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#readme"><b>THE FULL MANUAL <i>&rarr;</i></b><span>Every key, knob and page, the 17 techniques, the LFO, the mixer, MIDI in and out, building it yourself.</span></a>
+      <a class="manual" href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#whats-new-in-30-infinite-skratch"><b>3.0 IN DEPTH <i>&rarr;</i></b><span>The seven materials, FLOW, WORLD, the new band and grooves.</span></a>
+    </div>
+  </div>
+</section>
+
 <section class="dark">
   <div class="wrap">
     <div class="photos">
@@ -187,7 +314,7 @@
 
     <h2 class="tape">TRACKLISTING</h2>
     <p class="blurb">SAM, the 1982 Software Automatic Mouth, says 27 words onto a virtual record and you cut them up with the keys and the jog wheel.
-      Behind you: double-tracked chugging guitars, a bass and a twelve-piece kit locked to ten grooves. Switch on RAP MODE and the robot takes the mic.</p>
+      Behind you: double-tracked 7-string guitars, a bass and a twelve-piece kit locked to twelve grooves. Switch on RAP MODE and the robot takes the mic.</p>
     <div class="sides">
       <div class="side"><h3>SIDE A &middot; THE DECK</h3><ol>
         <li><span>01</span><div><b>17 TECHNIQUES</b><em>baby to crab to flare, each one drawn as a score</em></div></li>
@@ -214,7 +341,9 @@
       <tr><td>turn SELECT</td><td>scratch by hand; flick it, let go, and the record keeps spinning</td></tr>
       <tr><td>hold LFO + turn</td><td>the PRO page: rate, shape, depth, destination, reverb, curve, torque. Tap LFO for on/off</td></tr>
       <tr><td>hold FX + turn</td><td>the MIXER. Tap FX for the next effect</td></tr>
-      <tr><td>HOME</td><td>DJ, BEAT (the kit on the keys), TONE (the keys as a pitch fader)</td></tr>
+      <tr><td>HOME</td><td>DJ, BEAT (the kit on the keys), TONE (the keys as a pitch fader), SURF (the INFINITE record)</td></tr>
+      <tr><td>in SURF</td><td>KNOB4 = WORLD, EDIT + KNOB2 = FLOW, EDIT + KNOB4 = SURF drift, GLO = ETERNAL SKRATCH</td></tr>
+      <tr><td>PRESETS</td><td>the groove: OFF, BRUTAL TRUTH, BAD DAY, JUMP, BREAKDOWN, RAP METAL, BOOM BAP, STOMP, TRAP, SLUDGE, SEASICK, DIVEBOMB</td></tr>
       <tr><td>hold EDIT</td><td>the second layer of every button, and the audio load</td></tr>
     </table>
     <p class="fine">Every control is in the <a href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#play">README</a>.</p>
@@ -243,7 +372,7 @@
 import { Updater } from "./fm1ota.js";
 import { readPackage } from "./fwsc.js";
 
-const FIRMWARE = "firmware/numetal-pro-2.1.fwsc";     // a new release: put it in docs/firmware/ and change this
+const FIRMWARE = "firmware/numetal-pro-3.0.fwsc";     // a new release: put it in docs/firmware/ and change this
 const TRACK = "audio/scratch-techniques.mp3";          // tests/pro_techniques.txt through the host build
 const $ = (id) => document.getElementById(id);
 let pkg = null, busy = false, deck = null;
@@ -297,7 +426,7 @@ function step(k, a) {
     say(`Cutting the record… ${p}%`); bar(12 + p * 0.85);
   }
   else if (k === "reboot") { say("Restarting…"); bar(98); log("reboot"); }
-  else if (k === "done") { say(`Done. The FM-1 runs ${a}. Hit PLAY, then ARP.`, "ok"); bar(100); deck?.done(); log(`done ${a}`); }
+  else if (k === "done") { say(`Done. The FM-1 runs ${a}. Hit PLAY, then ARP, then HOME to SURF.`, "ok"); bar(100); deck?.done(); log(`done ${a}`); }
 }
 
 async function install(resume = false) {

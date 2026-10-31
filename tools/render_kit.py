@@ -152,36 +152,56 @@ def ks(f, sec, fs, damp, lp):                    # Karplus-Strong: a fractional 
     return line[Li + 4:]
 
 
-def amp(x, fs, gain, hp=110):                            # at 8x: tight, a tube screamer push, two stages, tone stack, cab
-    up = 8; y = signal.resample_poly(x, up, 1); f2 = fs * up
-    y = bq(y, 'high', hp, fs=f2, order=2)
-    y = bq(y, 'peak', 850, fs=f2, q=0.7, gain_db=5)
-    y = np.tanh(gain * y + 0.12) - np.tanh(0.12)
-    y = bq(y, 'low', 9000, fs=f2, order=1)
-    y = np.tanh(3.0 * y)
+def amp(x, fs, gain, hp=140):                            # 3.0, harder: at 8x, a boost into three stages (the last one a
+    up = 8; y = signal.resample_poly(x, up, 1); f2 = fs * up  # rectifier, lopsided), the deep scoop, the thump, a 4x12
+    y = bq(y, 'high', hp, fs=f2, order=2)                                       # tight: the boost cuts the low end first
+    y = bq(y, 'peak', 900, fs=f2, q=0.7, gain_db=7)
+    y = np.tanh(gain * y + 0.15) - np.tanh(0.15)
+    y = bq(y, 'high', 60, fs=f2, order=1)
+    y = bq(y, 'low', 7000, fs=f2, order=1)
+    y = np.tanh(4.0 * y)
+    y = bq(y, 'low', 6500, fs=f2, order=1)
+    y = np.tanh(2.2 * y + 0.08) - np.tanh(0.08)
     y = signal.resample_poly(y, 1, up)
-    y = bq(y, 'peak', 480, fs=fs, q=0.8, gain_db=-5)                           # the metal scoop
-    y = bq(y, 'peak', 2600, fs=fs, q=0.9, gain_db=3.5)                          # presence
-    y = bq(y, 'high', 75, fs=fs, order=2)                                       # the cab
-    y = bq(y, 'peak', 115, fs=fs, q=1.4, gain_db=4)
-    y = bq(y, 'low', 5200, fs=fs, order=4)
-    y = bq(y, 'peak', 3800, fs=fs, q=3, gain_db=-4)
+    y = bq(y, 'peak', 650, fs=fs, q=0.6, gain_db=-9)                            # the scoop, deep
+    y = bq(y, 'peak', 100, fs=fs, q=0.9, gain_db=5)                             # the thump
+    y = bq(y, 'peak', 3200, fs=fs, q=0.9, gain_db=5)                            # the snarl
+    y = bq(y, 'peak', 6500, fs=fs, q=1.5, gain_db=-6)                           # the fizz off
+    y = bq(y, 'high', 55, fs=fs, order=2)                                       # the cab
+    y = bq(y, 'peak', 120, fs=fs, q=1.4, gain_db=3)
+    y = bq(y, 'low', 5500, fs=fs, order=4)
+    y = bq(y, 'peak', 4000, fs=fs, q=3, gain_db=-4)
     return y
 
 
-def chord(f0, sec, fs, muted):
-    damp = 0.975 if muted else 0.9985
-    lp = 0.55 if muted else 0.25
-    s = sum(ks(f0 * r, sec, fs, damp, lp) * g for r, g in ((1, 1.0), (1.4983, 0.9), (2.0, 0.7)))
+def chord(f0, sec, fs, muted):                   # the 7-string: chug = root + octave (+ a ghost of the 5th), open = 5th chord
+    damp = 0.97 if muted else 0.9985
+    lp = 0.5 if muted else 0.22
+    parts = ((1, 1.0), (2.0, 0.8), (1.4983, 0.35)) if muted else ((1, 1.0), (1.4983, 0.9), (2.0, 0.75))
+    s = sum(ks(f0 * r, sec, fs, damp, lp) * g for r, g in parts)
     if muted:
-        s = bq(s, 'low', 2200, fs=fs, order=1)
+        s = bq(s, 'low', 2400, fs=fs, order=1)
     s /= np.abs(s).max()
-    y = amp(s * 0.5, fs, 28.0 if not muted else 24.0, 110 if not muted else 70)
+    y = amp(s * 0.5, fs, 42.0 if not muted else 36.0, 140 if not muted else 90)
     t = np.arange(len(y)) / fs
-    if muted:
-        y *= np.minimum(1, t / 0.002) * np.exp(-t / 0.09)
-    y = fade_end(y, fs, 0.05 if not muted else 0.03)
+    if muted:                                    # the palm: the thump up, the honk down; then the gate slamming shut
+        y = bq(bq(y, 'peak', 95, fs=fs, q=0.8, gain_db=7), 'peak', 1800, fs=fs, q=0.8, gain_db=-4)
+        y *= np.minimum(1, t / 0.0015) * np.exp(-t / 0.075) * np.clip((0.26 - t) / 0.03, 0, 1)
+    y = fade_end(y, fs, 0.05 if not muted else 0.02)
     return y
+
+
+def squeal(f0, sec, fs):                         # a pinch harmonic: the 12th and 16th partials ring (3.5 and 4 octaves
+    t = np.arange(int(sec * fs)) / fs            # up), the string under them barely; the finger's vibrato swells in
+    s = ks(f0 * 16, sec, fs, 0.9995, 0.05) + 0.6 * ks(f0 * 12, sec, fs, 0.9993, 0.05) + 0.08 * ks(f0, sec, fs, 0.97, 0.5)
+    s = bq(s, 'high', 450, fs=fs, order=2)
+    s /= np.abs(s).max()
+    w = 2 * np.pi * 6.0; a = 0.018 * np.minimum(1, t / 0.18)
+    tau = t + a * (1 - np.cos(w * t)) / w        # pitch = 1 + a sin(wt)
+    s = np.interp(tau, t, s)
+    y = amp(s * 0.6, fs, 60.0, 400)
+    y *= np.minimum(1, t / 0.004)
+    return fade_end(y, fs, 0.08)
 
 
 # ------------------------------------------------------------------ out
@@ -191,7 +211,8 @@ def pcm(x):
 
 
 GTR_FS = 22050
-GTR_F0 = 61.735                                  # B1: drop B, the riff's root at TUNE 6
+GTR_F0 = 55.0                                    # A1: the 7-string in drop A, the riff's root at TUNE 4 (3.0; was B1)
+SQ_FS = 16000
 
 
 def main():
@@ -210,7 +231,8 @@ def main():
     for name, x, fs in kit:
         out.append((name, pcm(to_rate(x, fs)), fs))
     out.append(('GCHUG', pcm(chord(GTR_F0, 0.32, GTR_FS, True)), GTR_FS))
-    out.append(('GOPEN', pcm(chord(GTR_F0, 1.45, GTR_FS, False)), GTR_FS))
+    out.append(('GOPEN', pcm(chord(GTR_F0, 1.2, GTR_FS, False)), GTR_FS))
+    out.append(('GSQUEAL', pcm(squeal(GTR_F0, 0.6, SQ_FS)), SQ_FS))
     total = 0
     lines = ['/* SPDX-License-Identifier: GPL-3.0-only */',
              '/* Generated by tools/render_kit.py: the kit and the guitar, rendered offline, 16-bit PCM. Do not edit. */',

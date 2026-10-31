@@ -1,0 +1,179 @@
+# SURF (3.0): the INFINITE record. HOME x3 = SURF. Taps on spots 0..6, a held BABY on spot 8 drifting at SURF 4,
+# SURF 12 + COMBO held on spot 3, the jog surfing forward past the keys and a throw, WORLD 7, then AUTO = ETERNAL SKRATCH
+100 btn 8
+200 btn 8
+300 btn 8
+600 keys 0x1
+800 keys 0
+1300 keys 0x2
+1500 keys 0
+2000 keys 0x4
+2200 keys 0
+2700 keys 0x8
+2900 keys 0
+3400 keys 0x10
+3600 keys 0
+4100 keys 0x20
+4300 keys 0
+4800 keys 0x40
+5000 keys 0
+5500 btn 12
+5600 keys 0x100
+9600 keys 0
+9800 hold 0x40
+9900 enc 5 8
+10000 hold 0
+10100 enc 1 17
+10300 keys 0x8
+14300 keys 0
+14500 enc 0 2
+14525 enc 0 2
+14550 enc 0 2
+14575 enc 0 2
+14600 enc 0 2
+14625 enc 0 2
+14650 enc 0 2
+14675 enc 0 2
+14700 enc 0 2
+14725 enc 0 2
+14750 enc 0 2
+14775 enc 0 2
+14800 enc 0 2
+14825 enc 0 2
+14850 enc 0 2
+14875 enc 0 2
+14900 enc 0 2
+14925 enc 0 2
+14950 enc 0 2
+14975 enc 0 2
+15000 enc 0 2
+15025 enc 0 2
+15050 enc 0 2
+15075 enc 0 2
+15100 enc 0 2
+15125 enc 0 2
+15150 enc 0 2
+15175 enc 0 2
+15200 enc 0 2
+15225 enc 0 2
+15250 enc 0 2
+15275 enc 0 2
+15300 enc 0 2
+15325 enc 0 2
+15350 enc 0 2
+15375 enc 0 2
+15400 enc 0 2
+15425 enc 0 2
+15450 enc 0 2
+15475 enc 0 2
+15500 enc 0 2
+15525 enc 0 2
+15550 enc 0 2
+15575 enc 0 2
+15600 enc 0 2
+15625 enc 0 2
+15650 enc 0 2
+15675 enc 0 2
+15700 enc 0 2
+15725 enc 0 2
+15750 enc 0 2
+15775 enc 0 2
+15800 enc 0 2
+15825 enc 0 2
+15850 enc 0 2
+15875 enc 0 2
+15900 enc 0 2
+15925 enc 0 2
+15950 enc 0 2
+15975 enc 0 2
+16000 enc 0 2
+16025 enc 0 2
+16050 enc 0 2
+16075 enc 0 2
+16100 enc 0 2
+16125 enc 0 2
+16150 enc 0 2
+16175 enc 0 2
+16200 enc 0 2
+16225 enc 0 2
+16250 enc 0 2
+16275 enc 0 2
+16300 enc 0 2
+16325 enc 0 2
+16350 enc 0 2
+16375 enc 0 2
+16400 enc 0 2
+16425 enc 0 2
+16450 enc 0 2
+16475 enc 0 2
+16500 enc 0 2
+16525 enc 0 2
+16550 enc 0 2
+16575 enc 0 2
+16600 enc 0 2
+16625 enc 0 2
+16650 enc 0 2
+16675 enc 0 2
+16700 enc 0 2
+16725 enc 0 2
+16750 enc 0 2
+16775 enc 0 2
+16800 enc 0 2
+16825 enc 0 2
+16850 enc 0 2
+16875 enc 0 2
+16900 enc 0 2
+16925 enc 0 2
+16950 enc 0 2
+16975 enc 0 2
+17000 enc 0 2
+17025 enc 0 2
+17050 enc 0 2
+17075 enc 0 2
+17100 enc 0 2
+17125 enc 0 2
+17150 enc 0 2
+17175 enc 0 2
+17200 enc 0 2
+17225 enc 0 2
+17250 enc 0 2
+17275 enc 0 2
+17300 enc 0 2
+17325 enc 0 2
+17350 enc 0 2
+17375 enc 0 2
+17400 enc 0 2
+17425 enc 0 2
+17450 enc 0 2
+17475 enc 0 2
+17500 enc 0 4
+17515 enc 0 4
+17530 enc 0 4
+17545 enc 0 4
+17560 enc 0 4
+17575 enc 0 4
+17590 enc 0 4
+17605 enc 0 4
+17620 enc 0 4
+17635 enc 0 4
+17650 enc 0 4
+17665 enc 0 4
+17680 enc 0 4
+17695 enc 0 4
+17710 enc 0 4
+17725 enc 0 4
+17740 enc 0 4
+17755 enc 0 4
+17770 enc 0 4
+17785 enc 0 4
+19500 enc 5 7
+20000 keys 0x1
+20200 keys 0
+20700 keys 0x2
+20900 keys 0
+21400 keys 0x4
+21600 keys 0
+22100 keys 0x8
+22300 keys 0
+23000 btn 7
+37000 end

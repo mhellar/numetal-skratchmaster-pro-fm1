@@ -1,0 +1,8 @@
+# 3.0 guitar: SEASICK then DIVEBOMB (korn grooves: seasick second guitar, dives, the pinch squeal, the bass clank),
+# then JUMP and BREAKDOWN on the new 7-string take; no deck
+100 enc 6 9
+300 btn 12
+10000 enc 6 1
+20000 enc 6 -8
+26000 enc 6 1
+32000 end

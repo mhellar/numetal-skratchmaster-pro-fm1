@@ -1,0 +1,9 @@
+# guitars alone: DIVEBOMB then SEASICK, drums and bass muted on the MIXER
+50 hold 0x4
+100 enc 5 -15
+150 enc 4 -15
+200 hold 0
+300 enc 6 10
+400 btn 12
+5200 enc 6 -1
+10000 end
