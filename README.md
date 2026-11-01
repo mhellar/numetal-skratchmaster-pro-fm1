@@ -43,7 +43,7 @@ PRO adds what a turntablist expects from a real setup:
 - **In the browser:** open the **[web installer](https://mhellar.github.io/numetal-skratchmaster-pro-fm1/)** in Chrome
   or Edge on a computer, plug the FM-1 in with a USB data cable, press **Install**. It uses Web MIDI, and nothing
   else needs to be installed.
-- **From the command line:** download `numetal-pro-3.0.fwsc` from [docs/firmware](docs/firmware), then
+- **From the command line:** download `numetal-pro-3.0.fwsc` from [Releases](https://github.com/mhellar/numetal-skratchmaster-pro-fm1/releases/latest) (or [docs/firmware](docs/firmware)), then
   `python3 tools/fm1_install.py numetal-pro-3.0.fwsc`
   (needs `pip3 install mido python-rtmidi`).
 - **Rescue:** hold **OCT-** while switching on. No sound, only the updater. Install anything from there.
