@@ -170,6 +170,7 @@
   .manual b i { font-style: normal; color: var(--rust); }
   .manual:hover b i { color: var(--tape); }
   .manual span { display: block; font-size: 14px; color: var(--fade); margin-top: 10px; }
+  .sub3 { font: 400 26px/1 var(--block); letter-spacing: 1px; color: var(--blood); margin: 34px 0 8px; border-bottom: 2px solid currentColor; padding-bottom: 6px; }
   .manual + .manual { margin-top: 22px; transform: rotate(.6deg); background: var(--rust); }
   .manual + .manual span { color: var(--bone); }
   .manual + .manual:hover { background: var(--blood); }
@@ -296,9 +297,17 @@
         <li><kbd>KNOB4</kbd> = WORLD. Hold <kbd>EDIT</kbd>: <kbd>KNOB2</kbd> = FLOW, <kbd>KNOB4</kbd> = SURF drift.</li>
         <li>Tap <kbd>GLO</kbd> for ETERNAL SKRATCH, then take your hands off.</li>
       </ol>
+      <h3 class="sub3">RECORD YOUR OWN LOOP</h3>
+      <p class="fine" style="margin-top:0">16 steps, one bar, under the groove: the row of squares on screen. Cyan = a word, yellow = a scratch, pink = drums.</p>
+      <ol class="steps">
+        <li>With the band playing, press <kbd>REC</kbd>. The REC chip lights.</li>
+        <li><b>Tap</b> keys to drop words (or SURF spots) on the beat, <b>hold</b> one to record a scratch. In BEAT mode keys 1-12 stack drums on top of the groove. It snaps to the nearest 16th and keeps overdubbing as it loops.</li>
+        <li>Press <kbd>REC</kbd> again to stop recording. The loop keeps playing and saves itself when you stop.</li>
+        <li>Hold <kbd>EDIT</kbd> (the shift) to clean up: <kbd>EDIT</kbd>+<kbd>SEQ</kbd> clears everything, <kbd>EDIT</kbd>+<kbd>REC</kbd> clears the words and keeps your drums, <kbd>EDIT</kbd>+<kbd>ARP</kbd> mutates it.</li>
+      </ol>
     </div>
     <div>
-      <a class="manual" href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#readme"><b>THE FULL MANUAL <i>&rarr;</i></b><span>Every key, knob and page, the 17 techniques, the LFO, the mixer, MIDI in and out, building it yourself.</span></a>
+      <a class="manual" href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#readme"><b>THE FULL MANUAL <i>&rarr;</i></b><span>Every key, knob and page, the sequencer, the 17 techniques, the LFO, the mixer, MIDI in and out, building it yourself.</span></a>
       <a class="manual" href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#whats-new-in-30-infinite-skratch"><b>3.0 IN DEPTH <i>&rarr;</i></b><span>The seven materials, FLOW, WORLD, the new band and grooves.</span></a>
     </div>
   </div>
@@ -344,6 +353,8 @@
       <tr><td>HOME</td><td>DJ, BEAT (the kit on the keys), TONE (the keys as a pitch fader), SURF (the INFINITE record)</td></tr>
       <tr><td>in SURF</td><td>KNOB4 = WORLD, EDIT + KNOB2 = FLOW, EDIT + KNOB4 = SURF drift, GLO = ETERNAL SKRATCH</td></tr>
       <tr><td>PRESETS</td><td>the groove: OFF, BRUTAL TRUTH, BAD DAY, JUMP, BREAKDOWN, RAP METAL, BOOM BAP, STOMP, TRAP, SLUDGE, SEASICK, DIVEBOMB</td></tr>
+      <tr><td>REC while playing</td><td>record your own 16-step loop: tap = a word, hold = a scratch, BEAT mode keys 1-12 = drums</td></tr>
+      <tr><td>EDIT + SEQ / REC / ARP</td><td>clear the loop / clear only its words, keep the drums / MUTATE it</td></tr>
       <tr><td>hold EDIT</td><td>the second layer of every button, and the audio load</td></tr>
     </table>
     <p class="fine">Every control is in the <a href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#play">README</a>.</p>

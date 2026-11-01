@@ -128,7 +128,7 @@ button always did.
 | --- | --- | --- |
 | **Keys** | DJ mode: 27 words (25 = AHHH, 26 = FRESH); tap = say it, hold = a tempo-synced scratch in the STYLE (in RAP MODE the last word you tap becomes the hook). BEAT mode: keys 1-12 = the kit (hold = roll), 13-27 = the first 15 words. TONE mode: the keys are a pitch fader (see TONE PLAY). SURF mode: 27 spots on the INFINITE record (see 3.0 above) | |
 | **PLAY** | start / stop | TAP tempo |
-| **REC** | record into the 16 steps (quantized) | clear the words, keep the drums |
+| **REC** | record into the 16 steps (quantized, see [the sequencer](#the-sequencer-record-your-own-loop)) | clear the words, keep the drums |
 | **SEQ** | hold = FILL (snare roll, chugs, toms) | clear the steps |
 | **ARP** | RAP MODE: verse / hook, the robot MCs | MUTATE the steps |
 | **GLO** | AUTO: the robot scratches by itself (SURF mode: ETERNAL SKRATCH) | HARD: drums driven, the kick ducks the deck |
@@ -151,6 +151,43 @@ button always did.
 | **PRESETS** | GROOVE: OFF, BRUTAL TRUTH, BAD DAY, JUMP, BREAKDOWN, RAP METAL, BOOM BAP, STOMP, TRAP, SLUDGE, SEASICK, DIVEBOMB | REACH | motor TORQUE | WIDTH |
 
 **FX:** FILTER, CRUSH, MEGAPHONE, DEMON, CRUNCH, STUTTER, REVERSE, WAH, GROWL.
+
+### The sequencer: record your own loop
+
+The sequencer is one bar of 16 steps (16th notes) that loops under the groove. It is the row of 16 squares across
+the middle of the screen: a **cyan** square says a word on that step, a **yellow** one scratches it, a **pink** dot
+adds drum hits, and the bright mark is the playhead. With SWING up, the odd steps lean late like the band.
+
+**Record a loop**
+
+1. Press **PLAY** to start the band. The sequencer only records while it's playing.
+2. Press **REC**. The REC chip, its light and a red dot in the top bar come on.
+3. Play over the beat. Hits snap to the nearest step, and a hit just before a step lands on that step without
+   playing twice.
+   - **Tap a key:** the word (or in SURF mode, the spot) goes on that step.
+   - **Hold a key:** the step becomes a scratch in the current STYLE, on the step where you pressed.
+   - **BEAT mode:** keys 1-12 stack drum hits onto the step, on top of the groove's own pattern. Keys 13-27 record
+     words.
+4. Recording stays on and the loop keeps going round, so you can overdub as you go. A step holds one word (a new
+   one replaces the old) and any number of drums.
+5. Press **REC** again to stop recording. The loop keeps playing.
+
+TONE mode isn't recorded. In RAP MODE a recorded word takes over the MC's line on that step.
+
+**Clear and change it (hold EDIT, the shift)**
+
+| Hold **EDIT** + | Does |
+| --- | --- |
+| **SEQ** | CLEARED: wipe everything, the words, the scratches and the drums |
+| **REC** | NO WORDS: wipe the words and scratches, keep the drums you recorded |
+| **ARP** | MUTATE: flip a few ghost drum notes, drop in a new word or a scratch, and sometimes take one out |
+
+Clearing only touches your loop; the groove from PRESETS keeps playing. To start over: hold EDIT, press SEQ, press
+REC, and play again.
+
+**Saving:** the loop is saved with your settings once the band is stopped and the deck is quiet, or right away
+with **SAVE**. It comes back the next time you switch the FM-1 on. (Plain SEQ, without EDIT, is FILL, not the
+sequencer.)
 
 ### The techniques
 
