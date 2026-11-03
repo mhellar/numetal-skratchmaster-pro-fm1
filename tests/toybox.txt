@@ -1,0 +1,5 @@
+# 5.0 TOYBOX: 64 bars of the mutating 808 beat (TOYBOX), then POOFS and TOY PIANO, no deck
+300 btn 12
+60000 enc 6 6
+70000 enc 6 -5
+80000 end

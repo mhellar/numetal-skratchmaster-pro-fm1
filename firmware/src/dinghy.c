@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+﻿/* SPDX-License-Identifier: GPL-3.0-only */
 /* NU//METAL SKRATCHMASTER PRO (2.0) FM-1: a fork of CYBER//SKRATCH for the M-VAVE FM-1 on Dinghy. The robot DJ joins a
  * nu metal band: drop-tuned chug guitars and a bass (the PUNK amp: detuned saws, high-pass, fuzz, a two-pole cab) play a
  * riff locked to each groove, SAM shouts a nu metal lexicon onto the turntable deck, and RAP MODE turns the robot into
@@ -11,8 +11,10 @@
  * the same every time you scratch back over a spot; the keys are 27 spots on it, the jog surfs past them for ever, a
  * held scratch drifts on (SURF), AUTO = ETERNAL SKRATCH (the robot surfs by itself). KNOB4 = the WORLD (100 records),
  * EDIT + KNOB2 = FLOW (0 = a battle record with gaps, 10+ = one continuous record, the zones crossfading).
- * And the band got harder: a 7-string in drop A, a hotter amp scooped deep, whammy dives, pinch squeals, the second
- * guitar seasick (a half step sharp, sliding down) and a clanky bass in the new grooves SEASICK and DIVEBOMB.
+ * 3.1, TOYBOX + DEEP CUTS: the band is gone. One hard 808 beat MUTATES for ever under the deck (see beat_mutate), its
+ * melody on toys (toy piano, music box, xylophone, kalimba, toy organ) and now and then a granular POOF. SURF cuts
+ * deep: two classic materials (STAB, a drop-A horn hit; CUT, AHHH / FRESH pitched down) make half of every record,
+ * strokes 1.5x longer, a low shelf under the deck, and the landscape glows toxic green.
  *
  *   KEYS       DJ mode: 27 words, tap = say it, HOLD = tempo-synced scratch in the STYLE while held
  *              (in RAP MODE the last word you tap becomes the HOOK)
@@ -41,14 +43,15 @@
  *   SELECT     JOG: scratch by hand     VELOCITY FX (a WAH pedal) SPACE: the plate's return
  *   ALGORITHM  STYLE (TONE: the SOURCE) SWING                     fader CURVE: SHARP MEDIUM SMOOTH
  *   KNOB1      the FX's amount          TUNING: drop F .. drop F  LFO RATE: 4 BAR .. 1/32, triplets   (3.0: A by default)
- *   KNOB2      GUITAR (0 = off)         ECHO                      LFO SHAPE: SINE TRI SAW UP SAW DN SQUARE S&H DRIFT
+ *   KNOB2      TOYS (0 = off)           ECHO                      LFO SHAPE: SINE TRI SAW UP SAW DN SQUARE S&H DRIFT
  *   KNOB3      BPM 60..180              KIT DECAY                 LFO DEPTH
  *   KNOB4      SAM VOICE (SURF: WORLD)  DRUMS level (SURF: SURF)  LFO DEST: FX PITCH FADER PAN RECORD BAND
- *   PRESETS    GROOVE (and its riff)    REACH                     motor TORQUE: LOW MID HIGH MAX
+ *   PRESETS    BEAT (the toy)           REACH                     motor TORQUE: LOW MID HIGH MAX
  *   FX: FILTER CRUSH MEGAPHONE DEMON CRUNCH STUTTER REVERSE WAH GROWL.
  *   STYLES: BABY DRAG STAB FORWARD BACKWARD CHIRP TRANSFORM TEAR FLARE 2-CLICK ORBIT CRAB TWIDDLE TAZER SCRIBBLE
  *   HYDROPLANE LASER COMBO (routines: a technique a beat, phrased in fours, ending on a flourish).
- *   GROOVES: OFF BRUTAL TRUTH BAD DAY JUMP BREAKDOWN RAP METAL BOOM BAP STOMP TRAP SLUDGE SEASICK DIVEBOMB.
+ *   BEATS: OFF, TOYBOX (the toy changes, POOFS sneak in), TOY PIANO, MUSIC BOX, XYLO, KALIMBA, TOY ORGAN, POOFS:
+ *   all one hard 808 beat that mutates for ever.
  *   GROWL: the sludge throat, Melvins style: the word slowed down 5..12 semitones, an octave under it (the octaver's
  *   flip-flop), vocal fry (chopped by jittery pulses at 50..110 Hz), driven and darkened. In RAP MODE the hook is
  *   always growled. The GROWL voice (KNOB4) is SAM at its lowest and slowest.
@@ -59,7 +62,7 @@
  *   (deep: it rocks back and forth, a baby scratch at the rate), BAND sweeps a low-pass over the guitars and bass.
  *   HAMSTER reverses the fader in the techniques that click: a chirp becomes the peaks, a crab cuts out instead of in.
  *
- *   THE MIXER (FX held + turn): KNOB1 VOX, KNOB2 GUITAR, KNOB3 BASS, KNOB4 DRUMS, SELECT VERB, ALGORITHM ECHO,
+ *   THE MIXER (FX held + turn): KNOB1 VOX, KNOB2 SYNTH, KNOB3 BASS, KNOB4 DRUMS, SELECT VERB, ALGORITHM ECHO,
  *   PRESETS WIDTH (0 = mono: the guitars, the doubler and the plate in the middle); faders and meters on the screen.
  *   THE SOUND: the vocal is de-imaged (the 11 kHz record's mirror fizz), given body under 250 Hz, compressed 4:1 fast,
  *   excited (air), and doubled (~11 ms later, drifting, as the side: wide, gone in mono). The guitars are two takes,
@@ -337,44 +340,23 @@ static const perc_t PERC[NDRUM] = {
 enum { D_KICK, D_SNARE, D_CLAP, D_HAT, D_OPEN, D_RIM, D_TOML, D_TOMH, D_808, D_CHINA, D_ZAP, D_CRASH };
 #define HATS ((1u << D_HAT) | (1u << D_OPEN))
 
-/* the riff: '.' nothing, '0'..'9' a palm-muted chug that many semitones over the tuning's root, 'A'..'K' an open
- * power chord (A = the root, B = a half step up, G = the tritone, H = the fifth). */
-/* 3.0: 'a'..'k' = the open chord with a whammy dive (an octave down), '!' = a pinch-harmonic squeal (vibrato). A
- * groove marked korn plays the second guitar a half step sharp on the open chords, sliding down onto the first
- * (seasick, dissonant), and the bass clanks. */
-typedef struct { const char *name; const char *lane[4]; uint8_t drum[4]; const char *riff; uint8_t korn; } groove_t;
-#define NGROOVES 12
-static const groove_t GROOVES[NGROOVES] = {
-    {"OFF",       {"................", "................", "................", "................"}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
-                  "................"},
-    {"BRUTAL TRUTH", {"x.x.x.x.x.x.x.x.", ".x.x.x.x.x.x.x.x", "xxxxxxxxxxxxxxxx", "x..............."}, {D_KICK, D_SNARE, D_CHINA, D_CRASH},
-                  "0101010132321g.."},          /* grind: the blast, a chromatic tremolo riff, a dive out */
-    {"BAD DAY",   {"x.....x.x.......", "........x.......", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_OPEN, D_CRASH},
-                  "A.....00..1.b...", 1},       /* half time, sulking: seasick guitars, the bass clanking */
-    {"JUMP",      {"x.xxx.xxx.xxx.xx", "....x.......x...", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_HAT, D_CRASH},
-                  "0.000.000.000.BB"},
-    {"BREAKDOWN", {"x..x......x..x..", "........x.......", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_CHINA, D_CRASH},
-                  "A..0......A..1.."},
-    {"RAP METAL", {"x.x...x.x.x...x.", "....x.......x...", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_OPEN, D_CRASH},
-                  "0.0...0.0.0...H."},
-    {"BOOM BAP",  {"x.......x.x.....", "....x.......x...", "x.x.x.x.x.x.x.x.", "..............x."}, {D_KICK, D_SNARE, D_HAT, D_OPEN},
-                  "................"},
-    {"STOMP",     {"x...x...x...x...", "....x.......x...", "..x...x...x...x.", "....x.......x..."}, {D_KICK, D_SNARE, D_OPEN, D_CLAP},
-                  "0.0.0.0.0.0.D.F."},
-    {"TRAP",      {"x......x..x.....", "........x.......", "x.x.xxx.x.x.xxxx", "x......x..x....."}, {D_KICK, D_CLAP, D_HAT, D_808},
-                  "A......0..0....."},
-    {"SLUDGE",    {"x.......x.....x.", "........x.......", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_OPEN, D_CRASH},
-                  "A.......B.....G."},
-    {"SEASICK",   {"x..x...x..x.x...", "....x.......x...", "x.x.x.x.x.x.x.x.", "x..............."}, {D_KICK, D_SNARE, D_HAT, D_CRASH},
-                  "A..0.0B...0.0.g.", 1},
-    {"DIVEBOMB",  {"x.x...x.x.x...x.", "....x.......x...", "x...x...x...x...", "x..............."}, {D_KICK, D_SNARE, D_CHINA, D_CRASH},
-                  "a.0.0.0.0.00..!.", 1},
-};
+/* 5.0 TOYBOX: one hard 808 beat that MUTATES for ever. Every bar a few things change (a kick moves and its 808 with it,
+ * an 808 slides, a hat rolls, a ghost snare, a toy note), some of what wandered drifts back home, and every 8 bars the
+ * home itself moves on. The melody is played on toys; in TOYBOX the toy changes every 8 bars and now and then a note
+ * goes POOF instead (grains of the SAM words, pitched, and a breath). PRESETS: OFF, TOYBOX, or one toy for good. */
+enum { P_TPIANO, P_MBOX, P_XYLO, P_KALIMBA, P_TORGAN, P_POOF, NPATCH };
+#define NTOYS 5
+#define NGROOVES 8
+static const char *const BEAT_NAME[NGROOVES] = {"OFF", "TOYBOX", "TOY PIANO", "MUSIC BOX", "XYLO", "KALIMBA", "TOY ORGAN", "POOFS"};
+#define B_REST (-1)
+#define B_TIE (-2)                              /* the 808 holds on, and the next note slides out of it */
+static uint16_t bt_drum[16], bt_hdrum[16], bt_roll, bt_hroll;   /* the bar now and its home; roll = a hat 32nd on that step */
+static int8_t bt_bass[16], bt_hbass[16], bt_lead[16], bt_hlead[16];
+static uint32_t bt_toy = P_TPIANO, bt_poof = 40, bt_init;   /* TOYBOX: the toy now, the odds (/256) a note poofs */
 #define NFLOWS 7
 static const char *const FLOWS[NFLOWS] = {      /* RAP MODE: where the words start in a bar */
     "x.x.x.x.x.x.x.x.", "x..x..x.x..x..x.", "..x.x.x...x.x.x.", "x.xxx.x.x.xxx.x.",
     "x...x.x.x...x.x.", "..xxx.x...xxx.x.", "x.x.x..xx.x.x..."};
-static uint16_t groove_mask[NGROOVES][16];
 
 /* =========================================================================== the audio ISR */
 enum { DK_OFF, DK_PLAY, DK_SCR, DK_HAND, DK_LET, DK_SPIN, DK_FRZ, DK_THROW, DK_STROKE, DK_REST, DK_TONE };
@@ -416,40 +398,142 @@ static const uint32_t INC_C9[12] = {            /* MIDI 120..131 (C9..B9); lower
     1153098554u, 1221665363u, 1294309365u, 1371273005u, 1452813141u, 1539201906u};
 static uint32_t inc_of(uint32_t note) { if (note > 131u) note = 131u; return INC_C9[note % 12u] >> (10u - note / 12u); }
 #define SAW(ph) ((int32_t)(ph) >> 16)           /* -32768..32767 */
-static struct {                                 /* the guitars, double-tracked from one PCM take: R ~11 ms late, a few cents up */
-    const int16_t *pcm[2]; uint32_t end[2], pos[2], inc[2], next, to;
-    int32_t env, envr, mute, lag;
-    int32_t dv;                                 /* the whammy: the pitch, Q15 (32767 = as played), diving */
-    uint32_t dive, vib, vph;                    /* a dive on; the squeal's vibrato */
-} gt;
-static struct { uint32_t inc, ph, sph; int32_t env, mute, lp, clk; } bs;     /* the bass: a saw and a sub sine, a clank */
-static void band_hit(uint32_t rc, uint32_t guitar)   /* a riff step: '0'..'9' chug, 'A'.. open, 'a'.. open + dive, '!' squeal */
+enum { W_SAW, W_SQR, W_SINE, W_FM, W_GRAIN };
+typedef struct {                                /* a sound: oscillators (or FM, or grains), a resonant filter */
+    uint8_t wave, nosc; int8_t iv[3];           /* the wave; how many oscillators, each one's semitones */
+    uint8_t det, atk, dec, sus; int8_t oct;     /* detune (inc >> det, 0 none); attack, decay shifts; sustain /255; octave */
+    uint16_t fbase, famt; uint8_t fdec;         /* cutoff (Q15 coef), its envelope's amount (FM: the index), its decay */
+    uint16_t dmp; uint8_t glide, drive, gain;   /* damping (low = resonant); legato notes slide; drive 0..3; level /8 */
+    uint8_t mr;                                 /* FM: the modulator's ratio x 2 (7 = 3.5: a struck metal tine) */
+} patch_t;
+static const patch_t PATCH[NPATCH] = {
+    /* TOY PIANO */ {W_FM,    1, {0, 0, 0},  0, 0, 12,  0, 1, 20000, 15000, 11, 32767, 0, 0, 13,  7},
+    /* MUSIC BOX */ {W_FM,    1, {0, 0, 0},  0, 0, 13,  0, 2, 20000,  7000, 12, 32767, 0, 0, 12,  6},
+    /* XYLO      */ {W_FM,    1, {0, 0, 0},  0, 0, 11,  0, 1, 20000, 20000,  9, 32767, 0, 0, 15,  8},
+    /* KALIMBA   */ {W_FM,    1, {0, 0, 0},  0, 0, 13,  0, 1, 20000, 10000,  9, 32767, 0, 0, 14, 12},
+    /* TOY ORGAN */ {W_SQR,   2, {0, 12, 0}, 9, 4, 12, 90, 1, 12000,  4000, 12, 30000, 0, 0,  8,  2},
+    /* POOF      */ {W_GRAIN, 1, {0, 0, 0},  0, 7, 12,  0, 1,     0,     0, 12,  9000, 0, 0, 14,  2},
+};
+#define SY_TOP (32767 << 8)
+#define GLEN 1024u                              /* a grain: 23 ms */
+static struct {
+    uint32_t ph[3], inc[3], tinc[3], gate, att;
+    int32_t env, fe, lo, bd;
+    uint32_t gp[3], gl[3], grate, gsp, gi; int32_t gf;   /* POOF: the grains (word pool, Q12), their rate, the next one, the breath's band */
+} sy;
+static uint32_t sy_pt;                          /* the sound of the note playing */
+static struct { uint32_t inc, tinc, ph; int32_t last, env; } bs;
+static int16_t sy_dl[512];                      /* the toys' right side: ~9 ms late, wide */
+static uint32_t sy_dw;
+static void band_step(int32_t ls, int32_t bsm, uint32_t lead)   /* a step: a toy note (unless rapping), the 808 */
 {
-    const uint32_t sq = rc == '!', dive = rc >= 'a' && rc <= 'k', korn = GROOVES[p_groove % NGROOVES].korn;
-    uint32_t open, note, root;
-    if (dive) rc -= 32u;
-    open = sq || rc >= 'A';
-    note = 29u + p_tune + (sq ? 0u : open ? rc - 'A' : rc - '0');   /* tune 4 = A1: the 7-string, drop A */
-    root = inc_of(note);
-    if (guitar) {
-        const uint32_t fs = sq ? PCM_GSQUEAL_FS : PCM_GOPEN_FS;
-        const uint32_t r = (uint32_t)pitch_rate((int32_t)(fs * 65536u / 44100u), ((int32_t)note - 33) << 8);   /* the takes: A1 */
-        gt.pcm[0] = sq ? PCM_GSQUEAL : open ? PCM_GOPEN : PCM_GCHUG;
-        gt.end[0] = (sq ? sizeof PCM_GSQUEAL / 2u : open ? sizeof PCM_GOPEN / 2u : sizeof PCM_GCHUG / 2u) - 1u;
-        gt.end[0] <<= 16;
-        gt.pos[0] = 0; gt.inc[0] = r;
-        gt.to = r + (r >> 8);
-        gt.next = korn && open && !sq ? (uint32_t)pitch_rate((int32_t)gt.to, 256) : gt.to;   /* seasick: a half step sharp, sliding */
-        gt.env = 32767 << 8;
-        gt.lag = 480;
-        gt.mute = !open;
-        gt.dv = 32767; gt.dive = dive; gt.vib = sq; gt.vph = 0;
+    const uint32_t g = p_groove % NGROOVES;
+    if (lead && ls >= 0) {
+        uint32_t pi = g == 1u ? bt_toy : g == 7u ? (uint32_t)P_POOF : g - 2u, k;
+        const patch_t *pt;
+        uint32_t note;
+        if (g == 1u && (noise() >> 24) < bt_poof) pi = P_POOF;
+        pt = &PATCH[pi];
+        sy_pt = pi;
+        note = (uint32_t)((int32_t)(53u + p_tune) + pt->oct * 12 + ls);   /* tune 4: A3 */
+        for (k = 0; k < pt->nosc; k++) {
+            uint32_t in = inc_of(note + (uint32_t)pt->iv[k]);
+            if (pt->det && k) in = k & 1u ? in + (in >> pt->det) : in - (in >> pt->det);
+            sy.tinc[k] = in;
+        }
+        if (pt->wave == W_FM) sy.tinc[1] = sy.tinc[0] / 2u * pt->mr;
+        for (k = 0; k < 3u; k++) sy.inc[k] = sy.tinc[k];
+        if (pt->wave == W_GRAIN) {
+            sy.grate = (uint32_t)pitch_rate(1024, ((int32_t)note - 69) << 8);   /* A4: the words as spoken */
+            sy.gf = (int32_t)(sy.tinc[0] / 10430u);                          /* the breath an octave over the note */
+            if (sy.gf > 20000) sy.gf = 20000;
+            sy.gsp = 0; sy.lo = sy.bd = 0;
+        }
+        sy.fe = SY_TOP;
+        if (pt->atk) sy.att = 1; else { sy.env = SY_TOP; sy.att = 0; }
+        sy.gate = 1;
+    } else if (ls == B_REST && PATCH[sy_pt].sus) sy.gate = 0;   /* the organ lets go */
+    if (g && bsm >= 0) {
+        bs.tinc = inc_of((uint32_t)(29 + (int32_t)p_tune + bsm));   /* tune 4: A1 */
+        if (!(bs.last == B_TIE && bs.env > 4096)) { bs.inc = bs.tinc; bs.env = SY_TOP; bs.ph = 0; }
     }
-    if (sq) return;                             /* the squeal rides over the bass */
-    bs.inc = root;
-    bs.env = 32767 << 8;
-    bs.mute = !open;
-    if (korn) bs.clk = 32767 << 8;
+    bs.last = bsm;
+}
+
+static const int8_t PENTA[8] = {0, 3, 5, 7, 10, 12, 15, 17};   /* minor pentatonic */
+static uint32_t rn(uint32_t n) { return (noise() >> 8) % n; }
+static void beat_home(void)                     /* a fresh hard 808 bar: the home the mutations wander from */
+{
+    static const char *const K[4] = {"x......x..x.....", "x.....x...x..x..", "x..x......x.....", "x......x.x......"};
+    const char *kk = K[rn(4)];
+    const int8_t up = rn(2) ? 7 : 5;
+    uint32_t st;
+    for (st = 0; st < 16u; st++) {
+        uint32_t m = 0;
+        if (kk[st] == 'x') m |= 1u << D_KICK;
+        if (st == 8u) m |= 1u << D_CLAP | 1u << D_SNARE;
+        if (!(st & 1u) || !rn(5)) m |= 1u << D_HAT;
+        if (st == 14u && rn(2)) m = (m & ~(1u << D_HAT)) | 1u << D_OPEN;
+        bt_hdrum[st] = (uint16_t)m;
+        bt_hbass[st] = kk[st] == 'x' ? (st >= 8u && rn(2) ? up : 0) : B_REST;
+    }
+    for (st = 0; st < 8u; st++) bt_hlead[st] = rn(5) < 2u ? PENTA[rn(7)] : B_REST;   /* a toy phrase, said twice */
+    bt_hlead[0] = PENTA[rn(4)];
+    for (st = 8u; st < 16u; st++) bt_hlead[st] = bt_hlead[st - 8u];
+    bt_hlead[8u + rn(8)] = rn(2) ? PENTA[rn(8)] : B_REST;        /* ...the second time a little different */
+    bt_hroll = (uint16_t)(1u << (rn(2) ? 6u : 13u));
+    for (st = 0; st < 16u; st++) { bt_drum[st] = bt_hdrum[st]; bt_bass[st] = bt_hbass[st]; bt_lead[st] = bt_hlead[st]; }
+    bt_roll = bt_hroll;
+}
+static void beat_mutate(uint32_t bar)           /* INFINITE MUTATE: a bar's changes; every 8 bars the home moves on */
+{
+    uint32_t n = 1u + rn(2), k;
+    for (k = 0; k < 16u; k++)                   /* the pull home: what wandered comes back, a little at a time */
+        if (!rn(8)) { bt_drum[k] = bt_hdrum[k]; bt_bass[k] = bt_hbass[k]; bt_lead[k] = bt_hlead[k]; }
+    if (!rn(6)) bt_roll = bt_hroll;
+    while (n--) {
+        const uint32_t st = rn(16), r = rn(11);
+        switch (r) {
+        case 0: case 1:                         /* a kick moves, its 808 with it */
+            if (!st || st == 8u) break;
+            if (bt_drum[st] >> D_KICK & 1u) { bt_drum[st] &= (uint16_t)~(1u << D_KICK); bt_bass[st] = B_REST; }
+            else { bt_drum[st] |= 1u << D_KICK; bt_bass[st] = rn(2) ? 0 : PENTA[rn(5)]; }
+            break;
+        case 2:                                 /* an 808 slide: hold on, then glide to a new note */
+            if (st && st < 15u) { bt_bass[st] = B_TIE; bt_bass[st + 1u] = PENTA[rn(6)]; bt_drum[st + 1u] |= 1u << D_KICK; }
+            break;
+        case 3:                                 /* a hat roll: 32nds over a run of steps */
+            for (k = st; k < st + 3u && k < 16u; k++) { bt_roll |= (uint16_t)(1u << k); bt_drum[k] |= 1u << D_HAT; }
+            break;
+        case 4:                                 /* a ghost */
+            if (st != 8u) bt_drum[st] ^= (uint16_t)(1u << (rn(2) ? D_RIM : D_SNARE));
+            break;
+        case 5: case 6:                         /* a toy note */
+            bt_lead[st] = rn(3) ? PENTA[rn(8)] : B_REST;
+            break;
+        case 7:                                 /* an echo of the phrase */
+            bt_lead[(st + 3u) & 15u] = bt_lead[st];
+            break;
+        case 8:                                 /* an open hat */
+            if (st != 8u) bt_drum[st] = (uint16_t)((bt_drum[st] & ~(1u << D_HAT)) | 1u << D_OPEN);
+            break;
+        case 9:                                 /* a double kick */
+            if (st < 15u && st != 7u) { bt_drum[st] |= 1u << D_KICK; bt_drum[st + 1u] |= 1u << D_KICK; bt_bass[st] = 0; }
+            break;
+        default:                                /* a hat drops out */
+            bt_drum[st] &= (uint16_t)~(1u << D_HAT);
+            break;
+        }
+    }
+    if ((bar & 7u) == 7u) {
+        if (!rn(4)) beat_home();                /* now and then somewhere new */
+        else if (rn(2)) for (k = 0; k < 16u; k++) { bt_hdrum[k] = bt_drum[k]; bt_hbass[k] = bt_bass[k]; bt_hlead[k] = bt_lead[k]; }
+        bt_toy = rn(NTOYS);
+        {
+            const int32_t pf = (int32_t)bt_poof + (int32_t)rn(81) - 40;
+            bt_poof = (uint32_t)(pf < 8 ? 8 : pf > 120 ? 120 : pf);
+        }
+    }
 }
 
 static int32_t deck_speed(int32_t rate0, uint32_t fx, uint32_t amt)   /* DEMON and GROWL slow the record down */
@@ -516,6 +600,9 @@ static uint32_t bump(uint32_t ph16)             /* 0 .. 32767 .. 0 over a cycle 
  *   DUST   the SAM bank shattered: grains of the words, re-pitched, some backwards, two streams overlapped
  *   CHAOS  the logistic map, its r swept through the bifurcations: a tone splits into two, four, then noise
  *   HISS   noise through a resonant filter that sweeps: the record's whistle and its kssh
+ *   STAB   a horn / power-chord stab in drop A: stacked saws, a fifth, a sub, driven: the fat deep cut
+ *   CUT    a whole word off the bank, AHHH and FRESH most of all, pitched down: the battle record classic
+ * Half the zones are a classic (STAB, CUT, AHHH): those are the ones that cut deep.
  * A WORLD leans on three of them. 1.5 s of the record lives in RAM, made 256 samples at a time as the needle gets
  * near, and the window slides along with the needle, so the record goes on in both directions for days. */
 #define ZSH 13u
@@ -527,8 +614,8 @@ static uint32_t bump(uint32_t ph16)             /* 0 .. 32767 .. 0 over a cycle 
 #define SURF_KEY 32                             /* commands and steps: SURF_KEY + k = the k-th spot on the record */
 #define SURF_HERE 127                           /* ...or wherever the needle is */
 #define NSURFK 27
-enum { Z_AHHH, Z_CHIRP, Z_FM, Z_BYTE, Z_DUST, Z_CHAOS, Z_HISS, Z_COUNT };
-static const char *const ZNAME[Z_COUNT] = {"AHHH", "CHIRP", "FM", "BYTE", "DUST", "CHAOS", "HISS"};
+enum { Z_AHHH, Z_CHIRP, Z_FM, Z_BYTE, Z_DUST, Z_CHAOS, Z_HISS, Z_STAB, Z_CUT, Z_COUNT };
+static const char *const ZNAME[Z_COUNT] = {"AHHH", "CHIRP", "FM", "BYTE", "DUST", "CHAOS", "HISS", "STAB", "CUT"};
 enum { ZE_STAB, ZE_HOLD, ZE_SWELL, ZE_CHOP };
 typedef struct { uint32_t h, h2, h3, mat, len, shape; } zone_t;
 static int8_t surf_buf[SURF_WIN + 64u] __attribute__((aligned(4)));
@@ -542,9 +629,12 @@ static void zone_of(uint32_t world, uint32_t z, zone_t *zp)   /* what zone z of 
 {
     const uint32_t wh = hsh(world * 0x9E3779B9u + 0x51u), h = hsh(z * 0x85EBCA6Bu ^ wh), r = h & 7u;
     zp->h = h; zp->h2 = hsh(h + 1u); zp->h3 = hsh(h + 2u);
-    zp->mat = r < 5u ? (wh >> (r % 3u * 5u)) % Z_COUNT : (h >> 8) % Z_COUNT;   /* the world's three, mostly */
+    static const uint8_t CLASSIC[3] = {Z_STAB, Z_CUT, Z_AHHH};
+    zp->mat = r < 4u ? CLASSIC[(h >> 8) % 3u] : r < 7u ? (wh >> (r % 3u * 5u)) % Z_COUNT : (h >> 8) % Z_COUNT;   /* classics, the world's three */
     zp->len = 2048u + ((h >> 3) & 3u) * 2048u;                                /* the sound; the rest is the gap */
     zp->shape = (h >> 12) & 3u;
+    if (zp->mat == Z_STAB) { zp->shape &= 1u; if (zp->len < 4096u) zp->len = 4096u; }   /* a stab: hit or held, never a swell */
+    if (zp->mat == Z_CUT) { zp->shape = ZE_HOLD; zp->len = 6144u; }               /* the word's own shape */
 }
 static int32_t zone_env(const zone_t *zp, uint32_t t)   /* the zone's envelope at t, Q15 */
 {
@@ -602,7 +692,7 @@ static void surf_gen(const zone_t *zpp, uint32_t n0, uint32_t t0, int32_t *o)   
     for (i = 0; i < SURF_TILE; i++) o[i] = 0;
     switch (zp.mat) {
     case Z_AHHH: {                              /* FOF: phase of a gliding pulse, the time since it, three formants ringing */
-        const uint32_t f0 = 80u + (zp.h2 & 127u) * 3u / 2u, f1 = f0 * GLIDE8[zp.h2 >> 7 & 7u] >> 8;
+        const uint32_t f0 = 60u + (zp.h2 & 127u), f1 = f0 * GLIDE8[zp.h2 >> 7 & 7u] >> 8;
         const uint32_t va = (zp.h2 >> 10) % 5u, vb = (zp.h2 >> 13) % 5u, L = zp.len;
         const int32_t inc0 = (int32_t)HZ(f0), dinc = ((int32_t)HZ(f1) - inc0) / (int32_t)L;
         const uint32_t phL = (uint32_t)inc0 * L + (uint32_t)dinc * (L * (L - 1u) / 2u), incL = (uint32_t)(inc0 + dinc * (int32_t)L);
@@ -729,6 +819,33 @@ static void surf_gen(const zone_t *zpp, uint32_t n0, uint32_t t0, int32_t *o)   
         }
         break;
     }
+    case Z_STAB: {                              /* saw + saw a hair sharp + the fifth + a sub, driven: a horn hit in drop A */
+        static const uint16_t ROOT8[8] = {41, 44, 49, 55, 55, 62, 65, 73};
+        const uint32_t f0 = ROOT8[zp.h2 & 7u], i0 = HZ(f0), i1 = i0 + (i0 >> 8) * (2u + (zp.h2 >> 3 & 3u)), i5 = i0 * 3u / 2u;
+        const int32_t drv = 3 + (int32_t)(zp.h2 >> 5 & 3u), oct = zp.h2 >> 7 & 1u;
+        for (i = 0; i < SURF_TILE; i++) {
+            const uint32_t t = t0 + i;
+            int32_t v = ((int32_t)(i0 * t) >> 18) + ((int32_t)(i1 * t) >> 18) + ((int32_t)(i5 * t) >> 19) + (sine(i0 * t) >> 2);
+            if (oct) v += (int32_t)(i0 * 2u * t) >> 19;
+            o[i] = soft(v * drv / 4) * 3 / 4;
+        }
+        break;
+    }
+    case Z_CUT: {                               /* a word read straight, a little slow: the record everyone cuts */
+        static const uint16_t CRATE[4] = {160, 176, 192, 216};
+        const uint32_t w = (zp.h2 & 3u) < 3u ? ((zp.h2 & 3u) == 2u ? FRESH_WORD : AHH_WORD) : (zp.h2 >> 4) % NKEYW;
+        const uint32_t L = bank[w].len, rt = CRATE[zp.h2 >> 8 & 3u];
+        if (bank_busy || L < 64u) break;
+        for (i = 0; i < SURF_TILE; i++) {
+            const uint32_t q = (t0 + i) * rt, idx = q >> 8;
+            if (idx + 1u >= L) break;
+            {
+                const int32_t a = wpool[bank[w].off + idx], b = wpool[bank[w].off + idx + 1u];
+                o[i] = soft(((a << 8) + (((b - a) * (int32_t)(q & 255u)))) * 3 / 2);
+            }
+        }
+        break;
+    }
     default: break;
     }
 }
@@ -831,6 +948,11 @@ static void drum_hit(uint32_t d)
     drum_hit_v |= 1u << d;
 }
 
+static int32_t stroke_len(uint32_t surf)        /* a technique's throw in samples: REACH; SURF half as far again (deep cuts), up to 10240 */
+{
+    const int32_t r = (int32_t)(2600u + p_reach * 800u);
+    return !surf ? r : r * 3 / 2 > 10240 ? 10240 : r * 3 / 2;
+}
 static int32_t tech_pos(uint32_t t, uint32_t ph)   /* where technique t has the record at ph (Q16 beats): 0..32767 */
 {
     const uint8_t *k = TECH[t].kp;
@@ -865,10 +987,12 @@ static int16_t dbl[1024];                                /* the doubler, 23 ms a
 
 static void app_audio(int32_t *out, uint32_t n)
 {
-    static uint32_t G, gacc, stepn, restarted, cmd_seen, drum_seen, crush_h, ew, rot, half_done;
+    static uint32_t G, gacc, stepn, restarted, cmd_seen, drum_seen, crush_h, ew, rot, half_done, half_hat;
     static uint32_t spin_seen, brake_seen, braking, brake_g0, muted, slam, was_held, fill_n, frz_was;
     static uint32_t ext_seen, ext_start_seen, ext_wait;
     static int32_t jog_seen, f1, r1, r2, crush_v, cz, duck, echo_y, dcz, wl, wb;
+    static int32_t tame1, tame2, tame_k = 16384;     /* TAME: the deck's top end, shaved as the record speeds up */
+    static int32_t deep1;                          /* DEEP: SURF's low end, pushed up (a shelf under ~160 Hz) */
     static uint32_t lfo_last, sh_new, sh_old, last_mode;
     static int32_t lfo_g = 32767, pan_s, blp, band_s = 32767, mot;
     static int32_t dbuf[64], vbuf[64], gbl[64], gbr[64], bbuf[64], wbuf[64];   /* drums, deck, guitars L R, bass, the wet drums */
@@ -976,11 +1100,7 @@ static void app_audio(int32_t *out, uint32_t n)
         if (dk.word >= 0 && !bank_busy) {
             int32_t len = (int32_t)bank[dk.word].len << 16;
             if (dk.mode != DK_HAND) { dk.hand = dk.pos < 0 ? 0 : dk.pos > len ? len : dk.pos; dk.mode = DK_HAND; }
-            {                                   /* velocity: a fast flick throws it further */
-                int32_t mv = d * p_jog_gain;
-                mv = mv > 12000 ? 12000 : mv < -12000 ? -12000 : mv;
-                dk.hand += mv << 16;
-            }
+            dk.hand += d * (p_jog_gain << 16);   /* velocity: a fast flick throws it further */
             if (dk.hand < 0) dk.hand = 0;
             if (dk.hand > len) dk.hand = len;
         }
@@ -1009,7 +1129,11 @@ static void app_audio(int32_t *out, uint32_t n)
         }
         if (dk.word == SURF_WORD) {
             const int32_t ip = dk.pos >> 16;
-            if (ip > (int32_t)(SURF_WIN - SURF_STEP)) surf_slide((int32_t)SURF_STEP);
+            if (dk.mode == DK_SCR) {            /* a technique: keep the whole stroke in the window, by its middle */
+                const int32_t mid = (dk.anchor >> 16) + stroke_len(1) / 2;
+                if (mid > (int32_t)(SURF_WIN / 2u + SURF_STEP / 2u)) surf_slide((int32_t)SURF_STEP);
+                else if (mid < (int32_t)(SURF_WIN / 2u - SURF_STEP / 2u)) surf_slide(-(int32_t)SURF_STEP);
+            } else if (ip > (int32_t)(SURF_WIN - SURF_STEP)) surf_slide((int32_t)SURF_STEP);
             else if (ip < (int32_t)SURF_STEP) surf_slide(-(int32_t)SURF_STEP);
             surf_abs_v = surf_base + (uint32_t)(dk.pos >> 16);
         }
@@ -1070,23 +1194,25 @@ static void app_audio(int32_t *out, uint32_t n)
                 uint32_t g;
                 if ((int32_t)(G - at) < 0) break;
                 due++;
-                g = groove_mask[p_groove % NGROOVES][s] | seq_drum[s];
-                half_done = 0;
+                if (!bt_init) { bt_init = 1; beat_home(); }
+                if (play && !muted && s == 0u && p_groove % NGROOVES) beat_mutate(stepn >> 4);   /* INFINITE MUTATE */
+                g = (p_groove % NGROOVES ? bt_drum[s] : 0u) | seq_drum[s];
+                half_done = 0; half_hat = 0;
                 if (muted && s == 0u) { muted = 0; slam = 1; }
                 if (play && !muted) {
                     const uint32_t bar = stepn >> 4 & 7u, verse = rap && bar < 4u;
-                    uint32_t rc = (uint32_t)GROOVES[p_groove % NGROOVES].riff[s];
+                    int32_t rc = bt_lead[s], bc = bt_bass[s];
                     if (rap && s == 0u && (bar == 0u || bar == 4u)) slam = 1;   /* the verse and the hook come in on a crash */
-                    if (drop) { g &= HATS; rc = '.'; }              /* DROP: only the hats stay */
+                    if (drop) { g &= HATS; rc = bc = B_REST; }      /* DROP: only the hats stay */
                     if (fill) {                                     /* FILL: a snare roll, chugs, toms at the end */
                         g = (g & HATS) | 1u << D_SNARE;
                         if (fill_n >= 6u && fill_n & 1u) g |= 1u << (fill_n & 2u ? D_TOMH : D_TOML);
-                        rc = '0';
+                        rc = B_REST; bc = 0;                        /* the 808 rolls */
                         fill_n++;
                     } else fill_n = 0;
-                    if (slam && !held) { g |= 1u << D_CRASH | 1u << D_KICK; rc = 'A'; slam = 0; }
+                    if (slam && !held) { g |= 1u << D_CRASH | 1u << D_KICK; rc = bc = 0; slam = 0; }
                     for (d = 0; d < NDRUM; d++) if (g >> d & 1u) drum_hit(d);
-                    if (rc != '.' && p_groove % NGROOVES) band_hit(rc, !verse);
+                    if (p_groove % NGROOVES) band_step(rc, bc, !verse);
                     if (seq_word[s] >= 0 && !seq_skip[s] && dk.mode != DK_FRZ && dk.mode != DK_SPIN)
                         deck_start(seq_word[s], seq_flag[s] & SEQ_SCR ? CMD_SCR : CMD_SAY, 1);
                     if (rap) {                                      /* RAP MODE: the robot MCs */
@@ -1138,6 +1264,10 @@ static void app_audio(int32_t *out, uint32_t n)
                 const uint32_t into = G - ((stepn - 1u) << 16);
                 seq_frac_v = into >= 65536u ? 255u : into >> 8;
             }
+            if (play && !muted && p_groove % NGROOVES && !half_hat && seq_frac_v >= 128u && (bt_roll >> ((stepn - 1u) & 15u) & 1u)) {
+                half_hat = 1;                                   /* a hat roll: the 32nd between */
+                drum_hit(D_HAT);
+            }
             if (fill && play && !muted && fill_n > 8u && !half_done && seq_frac_v >= 128u) {
                 half_done = 1;                                  /* the second half of a fill: 32nds */
                 drum_hit(D_SNARE);
@@ -1186,7 +1316,7 @@ static void app_audio(int32_t *out, uint32_t n)
                 }
                 gate = (int32_t)tech_open(dk.tech, dk.ph);
                 if (dk.word == SURF_WORD) dk.anchor += (int32_t)(p_surf * 256u * (gblk >> 2));   /* SURF: the spot drifts on, p_surf x 256 samples a beat */
-                target = dk.anchor + ((tech_pos(dk.tech, dk.ph) * (int32_t)(2600u + p_reach * 800u)) << 1);   /* Q16 */
+                target = dk.anchor + ((tech_pos(dk.tech, dk.ph) * stroke_len(dk.word == SURF_WORD)) << 1);   /* Q16 */
                 if (target > len) target = len;
                 if (target < 0) target = 0;
                 dk.rate = (target - dk.pos) / (int32_t)m;
@@ -1201,9 +1331,9 @@ static void app_audio(int32_t *out, uint32_t n)
                 break;
             }
             case DK_HAND:
-            {                                   /* the hand: 1/3 of the way each block (snappier), up to 16x (SURF 32x) */
+            {                                   /* the hand: 1/4 of the way each block, up to 16x (SURF 32x) */
                 const int32_t cap = (dk.word == SURF_WORD ? 32 : 16) * rate0;
-                dk.rate = ((dk.hand - dk.pos) / 3) / (int32_t)m;
+                dk.rate = ((dk.hand - dk.pos) >> 2) / (int32_t)m;
                 if (dk.rate > cap) dk.rate = cap;
                 if (dk.rate < -cap) dk.rate = -cap;
                 break;
@@ -1245,6 +1375,13 @@ static void app_audio(int32_t *out, uint32_t n)
             const int32_t loopl = (int32_t)(bank[dk.word].loop ? bank[dk.word].loop : (uint32_t)len) << 16;
             int32_t pos = dk.pos, rate = dk.rate, fd = dk.fader, lg = lfo_g;
             const int32_t fast = rate > 65536 || rate < -65536;   /* over a word sample a frame: average what it passed */
+            {   /* TAME: two one-poles; flat up to 1.75x the motor, then the faster it goes the darker (to ~2 kHz at 8x) */
+                const int32_t ar0 = rate < 0 ? -rate : rate, ar = ar0 > (1 << 22) ? 1 << 22 : ar0, r0 = rate0 > 0 ? rate0 : 1;
+                const int32_t x = (ar << 8) / r0, x0 = dk.word == SURF_WORD ? 320 : 448;   /* speed, Q8: 256 = the motor; SURF darkens sooner */
+                int32_t k = x <= x0 || tone ? 16384 : 16384 * x0 / x;   /* TONE PLAY keeps its melody bright */
+                if (k < 4000) k = 4000;
+                tame_k += (k - tame_k) >> 1;
+            }
             if (dk.word == SURF_WORD) {                 /* the record under the needle this block: made if not yet */
                 int32_t a = pos >> 16, b = (pos + rate * (int32_t)m) >> 16, k;
                 if (a > b) { k = a; a = b; b = k; }
@@ -1288,6 +1425,10 @@ static void app_audio(int32_t *out, uint32_t n)
                     int32_t e1 = pos >> 16, e2 = (loopl - pos) >> 16, e = e1 < e2 ? e1 : e2;
                     if (e < 160) s = (s * (e < 0 ? 0 : e)) / 160;
                 }
+                tame1 += ((s - tame1) * tame_k) >> 14;          /* TAME (k 16384 = straight through) */
+                tame2 += ((tame1 - tame2) * tame_k) >> 14;
+                s = tame2;
+                if (dk.word == SURF_WORD) { deep1 += ((s - deep1) * 1150) >> 15; s = s - (s >> 2) + deep1; }   /* DEEP: ~+7 dB under 250 Hz, the top -2.5 */
                 s = (s * fd) >> 15;
                 s = (s * lg) >> 15;
                 dcz += (s - dcz) >> 10;                         /* a still record is silence, not a step */
@@ -1332,61 +1473,86 @@ static void app_audio(int32_t *out, uint32_t n)
         }
         if ((dr[D_KICK].env && dr[D_KICK].pos < (240u << 16)) || (dr[D_808].env && dr[D_808].pos < (240u << 16))) duck = 32767;
 
-        /* ---- the band: the guitar take L and R (PCM, amp and cab rendered in), the bass in the middle */
+        /* ---- the band: the toys (a little wide), the 808 in the middle */
         for (i = 0; i < m; i++) gbl[i] = gbr[i] = bbuf[i] = 0;
-        if (gt.lag > 0 && (gt.lag -= (int32_t)m) <= 0) {      /* the second take's pick lands */
-            gt.pcm[1] = gt.pcm[0]; gt.end[1] = gt.end[0]; gt.pos[1] = 0; gt.inc[1] = gt.next;
-            gt.envr = gt.env;
-        }
-        if (gt.env > 4096 || gt.envr > 4096 || bs.env > 4096) {
+        if (sy.env > 2048 || sy.att || bs.env > 2048) {
             const uint32_t bk = braking ? braking : 256u;       /* BRAKE: the band winds down with the turntable */
-            uint32_t i0, i1;
-            const uint32_t ib = (bs.inc >> 8) * bk;
-            const int32_t gsh = gt.mute ? 13 : 15, bsh = bs.mute ? 11 : 14;
-            if (gt.inc[1] != gt.to && gt.lag <= 0) {            /* seasick: the second guitar slides down onto the first */
-                const int32_t dd = (int32_t)(gt.to - gt.inc[1]);
-                gt.inc[1] = dd > -64 && dd < 64 ? gt.to : gt.inc[1] + (uint32_t)(dd >> 6);
-            }
-            i0 = (gt.inc[0] >> 8) * bk; i1 = (gt.inc[1] >> 8) * bk;
-            if (gt.dive) {                                      /* the whammy: an octave down in ~0.4 s, then held */
-                if (gt.dv > 16384) gt.dv -= (gt.dv >> 8) + 1;
-                i0 = mulq15(i0, (uint32_t)gt.dv); i1 = mulq15(i1, (uint32_t)gt.dv);
-            }
-            if (gt.vib) {                                       /* the squeal: a 6 Hz finger vibrato, +-2 %, swelling in */
-                const int32_t dev = (sine(gt.vph) * (int32_t)gt.vib) >> 8;
-                gt.vph += 584353u * m;
-                if (gt.vib < 256u) gt.vib++;
-                i0 = (uint32_t)((int32_t)i0 + ((((int32_t)(i0 >> 10)) * dev) >> 15) * 20);
-                i1 = (uint32_t)((int32_t)i1 + ((((int32_t)(i1 >> 10)) * dev) >> 15) * 20);
+            const patch_t *pt = &PATCH[sy_pt];
+            const uint32_t no = pt->nosc;
+            const int32_t norm = no == 1u ? 32767 : no == 2u ? 16384 : 10923, top = (int32_t)pt->sus * (SY_TOP / 255);
+            uint32_t i3[3], k, ib, gr8 = (sy.grate * bk) >> 8;
+            for (k = 0; k < 3u; k++) i3[k] = (sy.inc[k] >> 8) * bk;
+            {
+                const int32_t dd = (int32_t)(bs.tinc - bs.inc);
+                bs.inc += (uint32_t)((dd >> 5) + (dd > 0) - (dd < 0));   /* the 808's slide */
+                ib = (bs.inc >> 8) * bk;
             }
             for (i = 0; i < m; i++) {
-                int32_t xl = 0, xr = 0, b2;
-                if (gt.env > 4096 && gt.pos[0] < gt.end[0]) {   /* L */
-                    const int16_t *g = gt.pcm[0] + (gt.pos[0] >> 16);
-                    xl = g[0] + (((g[1] - g[0]) * (int32_t)((gt.pos[0] >> 1) & 0x7FFFu)) >> 15);
-                    xl = (xl * (gt.env >> 8)) >> 14;              /* x 2: the take is clean, the old amp ran hot */
-                    gt.pos[0] += i0;
-                    gt.env -= gt.env >> gsh;
+                int32_t x = 0, y, b2 = 0;
+                if (sy.env > 2048 || sy.att) {
+                    if (pt->wave == W_FM) {             /* a struck tine: the index dies away first */
+                        const int32_t idx = ((sy.fe >> 8) * (int32_t)pt->famt) >> 15, md = (sine(sy.ph[1]) * idx) >> 15;
+                        x = sine(sy.ph[0] + ((uint32_t)md << 16));
+                        sy.ph[0] += i3[0]; sy.ph[1] += i3[1];
+                    } else if (pt->wave == W_GRAIN) {   /* POOF: three grains of the words at a time, and a breath */
+                        int32_t ga = 0, nz, hp;
+                        if (sy.gsp-- == 0u) {
+                            sy.gsp = 260u + (noise() >> 24) * 2u;
+                            if (!bank_busy) {
+                                const uint32_t w = (noise() >> 8) % NKEYW, L = bank[w].len;
+                                if (L > 3000u) {
+                                    const uint32_t g0 = bank[w].off + 200u + (noise() >> 8) % (L - 2600u), sl = sy.gi++ % 3u;
+                                    sy.gp[sl] = g0 << 12; sy.gl[sl] = GLEN;
+                                }
+                            }
+                        }
+                        for (k = 0; k < 3u; k++) if (sy.gl[k]) {
+                            ga += (wpool[sy.gp[k] >> 12] * (int32_t)bump((GLEN - sy.gl[k]) * (65536u / GLEN))) >> 7;
+                            sy.gp[k] += gr8; sy.gl[k]--;
+                        }
+                        nz = (int32_t)(noise() >> 17) - 16384;
+                        hp = nz - sy.lo - ((pt->dmp * sy.bd) >> 15);
+                        sy.bd += (sy.gf * (hp >> 1)) >> 14;
+                        sy.lo += (sy.gf * (sy.bd >> 1)) >> 14;
+                        sy.bd = sy.bd > 90000 ? 90000 : sy.bd < -90000 ? -90000 : sy.bd;
+                        sy.lo = sy.lo > 90000 ? 90000 : sy.lo < -90000 ? -90000 : sy.lo;
+                        x = soft(ga + (sy.bd >> 1));
+                    } else {
+                        for (k = 0; k < no; k++) {
+                            const uint32_t ph = sy.ph[k];
+                            x += pt->wave == W_SAW ? SAW(ph) : pt->wave == W_SQR ? (ph & 0x80000000u ? 22000 : -22000) : sine(ph);
+                            sy.ph[k] = ph + i3[k];
+                        }
+                        x = (x * norm) >> 15;
+                        {                               /* the filter, its envelope opening it */
+                            int32_t f = (int32_t)pt->fbase + (((sy.fe >> 8) * (int32_t)pt->famt) >> 15), hp;
+                            if (f > 26000) f = 26000;
+                            hp = x - sy.lo - ((pt->dmp * sy.bd) >> 15);
+                            sy.bd += (f * (hp >> 1)) >> 14;
+                            sy.lo += (f * (sy.bd >> 1)) >> 14;
+                            sy.bd = sy.bd > 90000 ? 90000 : sy.bd < -90000 ? -90000 : sy.bd;
+                            sy.lo = sy.lo > 90000 ? 90000 : sy.lo < -90000 ? -90000 : sy.lo;
+                            x = sy.lo;
+                        }
+                    }
+                    if (pt->drive) x = soft(x * (1 + (int32_t)pt->drive));
+                    if (sy.att) { sy.env += (SY_TOP - sy.env) >> pt->atk; if (sy.env > SY_TOP - (SY_TOP >> 6)) sy.att = 0; }
+                    else sy.env += ((sy.gate ? top : 0) - sy.env) >> pt->dec;
+                    sy.fe -= sy.fe >> pt->fdec;
+                    x = (((x * (sy.env >> 8)) >> 15) * (int32_t)pt->gain * 3) >> 5;   /* toys ride over the 808 */
                 }
-                if (gt.envr > 4096 && gt.pos[1] < gt.end[1]) {  /* R: the second take */
-                    const int16_t *g = gt.pcm[1] + (gt.pos[1] >> 16);
-                    xr = g[0] + (((g[1] - g[0]) * (int32_t)((gt.pos[1] >> 1) & 0x7FFFu)) >> 15);
-                    xr = (xr * (gt.envr >> 8)) >> 14;
-                    gt.pos[1] += i1;
-                    gt.envr -= gt.envr >> gsh;
+                y = sy_dl[(sy_dw - 400u) & 511u];
+                sy_dl[sy_dw] = (int16_t)CLIP(x);
+                sy_dw = (sy_dw + 1u) & 511u;
+                if (bs.env > 2048) {                    /* the 808: a sine driven hard, long */
+                    b2 = soft((sine(bs.ph) * 5) >> 1);
+                    bs.env -= bs.env >> 15;
+                    bs.ph += ib;
+                    b2 = (b2 * (bs.env >> 8)) >> 15;
                 }
-                bs.ph += ib; bs.sph += ib >> 1;
-                bs.lp += ((SAW(bs.ph) - bs.lp) * 2600) >> 15;
-                b2 = bs.lp + (sine(bs.sph) >> 1);               /* + the octave below, for headphones */
-                if (bs.clk > 4096) {                            /* the clank: the string slapping the frets, bright, ~8 ms */
-                    b2 += (SAW(bs.ph << 4) * (bs.clk >> 8)) >> 16;
-                    bs.clk -= bs.clk >> 8;
-                }
-                b2 = (b2 * (bs.env >> 8)) >> 15;
-                bs.env -= bs.env >> bsh;
-                bbuf[i] = (b2 * 3) >> 2;                        /* the bass in the middle */
-                gbl[i] = xl;
-                gbr[i] = xr;
+                bbuf[i] = (b2 * 5) >> 3;                        /* the 808 in the middle */
+                gbl[i] = x;
+                gbr[i] = (x + 3 * y) >> 2;
             }
         }
 
@@ -1698,9 +1864,15 @@ static void draw_deck(int32_t w, uint32_t pos, uint32_t rot, uint32_t on, uint32
 }
 
 /* SURF: the endless record as a landscape scrolling under the needle, five zones of it; each zone's envelope is a
- * mountain in its material's colour, the 27 spots the keys play are marked, the surfer rides the needle */
-static const uint16_t ZCOL[Z_COUNT] = {RGB(255, 140, 0), RGB(0, 230, 255), RGB(220, 60, 255), RGB(150, 255, 0),
-                                       RGB(255, 220, 0), RGB(255, 50, 50), RGB(200, 210, 200)};
+ * mountain in its material's green (it is nu metal: everything glows toxic), lit along its ridge with a haze above,
+ * brighter where the surfer rides; the 27 spots the keys play are marked */
+static const uint16_t ZCOL[Z_COUNT] = {RGB(150, 255, 0), RGB(0, 255, 140), RGB(70, 210, 40), RGB(210, 255, 60),
+                                       RGB(120, 190, 70), RGB(0, 200, 90), RGB(150, 180, 130), RGB(100, 255, 20),
+                                       RGB(220, 255, 150)};
+static uint16_t dim565(uint16_t c, uint32_t q)   /* c at q/8 */
+{
+    return (uint16_t)(((((uint32_t)c >> 11) * q >> 3) << 11) | (((((uint32_t)c >> 5) & 63u) * q >> 3) << 5) | ((c & 31u) * q >> 3));
+}
 static void draw_surf(uint32_t world, uint32_t abs, uint32_t rot, uint32_t on, uint32_t fader, uint16_t acc)
 {
     const uint32_t SPX = 256u, n0 = abs - 80u * SPX;
@@ -1712,7 +1884,7 @@ static void draw_surf(uint32_t world, uint32_t abs, uint32_t rot, uint32_t on, u
     {
         const int32_t h = dk_speed_v > 64u ? 60 : (int32_t)(dk_speed_v * 60u / 64u);
         cv_rect(69, 2, 3, 60, C_DEEP);
-        cv_rect(69, 62 - h, 3, h, h > 30 ? C_PINK : h > 15 ? C_YEL : C_CYAN);
+        cv_rect(69, 62 - h, 3, h, h > 30 ? RGB(220, 255, 150) : h > 15 ? C_PINK : C_MID);
     }
     for (x = 0; x < 160u; x++) {
         const uint32_t n = n0 + x * SPX, z = n >> ZSH, t = n & (ZLEN - 1u);
@@ -1721,13 +1893,21 @@ static void draw_surf(uint32_t world, uint32_t abs, uint32_t rot, uint32_t on, u
         h = zone_env_flow(&zp, t, p_flow) * 40 >> 15;
         if (h && (zp.mat == Z_HISS || zp.mat == Z_CHAOS || zp.mat == Z_BYTE)) h -= (int32_t)(hsh(n >> 8) & 3u);   /* rough ground */
         if (h < 1) h = t < zone_len(&zp, p_flow) ? 1 : 0;
-        if (h) cv_rect(76 + (int32_t)x, 60 - h, 1, h, ZCOL[zp.mat]);
-        if (t < SPX) cv_rect(76 + (int32_t)x, 61, 1, 3, z < NSURFK ? C_YEL : C_DEEP);   /* a zone starts: yellow = a key */
+        if (h) {
+            const int32_t dx = (int32_t)x - 80, ax = dx < 0 ? -dx : dx;
+            const uint32_t lit = ax < 24 && on ? 6u - (uint32_t)ax / 6u : 2u;   /* the glow around the surfer */
+            const uint16_t c = ZCOL[zp.mat];
+            cv_rect(76 + (int32_t)x, 60 - h, 1, h, dim565(c, lit));
+            cv_rect(76 + (int32_t)x, 60 - h, 1, h < 2 ? h : 2, c);               /* the ridge */
+            if (h < 57) cv_rect(76 + (int32_t)x, 57 - h, 1, 3, dim565(c, fader > 16000u && on ? 3u : 1u));   /* the haze */
+        }
+        if (t < SPX) cv_rect(76 + (int32_t)x, 61, 1, 3, z < NSURFK ? RGB(220, 255, 150) : C_DEEP);   /* a zone starts: bright = a key */
         if (x == 80u) hn = h;
     }
     cv_rect(76, 60, 160, 1, C_DEEP);
     cv_rect(156, 0, 1, 60 - hn - 4, on ? (fader > 16000u ? C_TXT : C_PINK) : C_GRY);   /* the needle */
-    cv_rect(151, 60 - hn - 4, 11, 2, on ? C_YEL : C_GRY);                            /* the surfer's board */
+    cv_rect(149, 60 - hn - 5, 15, 4, on ? dim565(C_PINK, 3u) : C_DEEP);                 /* the board's glow */
+    cv_rect(151, 60 - hn - 4, 11, 2, on ? C_PINK : C_GRY);                           /* the surfer's board */
     cv_rect(155, 60 - hn - 9, 3, 5, on ? C_TXT : C_GRY);
     cv_blit(0, 60);
 }
@@ -1790,7 +1970,7 @@ static void draw_lfo(uint32_t on, uint32_t shape, const char *rate, const char *
 
 static void draw_mixer(const uint8_t *lv, const uint8_t *of, const uint32_t *mt, uint16_t acc)   /* FX held: the MIXER */
 {
-    static const char *const CH[7] = {"VOX", "GTR", "BAS", "DRM", "VRB", "ECH", "WID"};
+    static const char *const CH[7] = {"VOX", "TOY", "808", "DRM", "VRB", "ECH", "WID"};
     uint32_t k;
     cv_begin(240, 64, C_BLACK);
     for (k = 0; k < 7u; k++) {
@@ -1876,7 +2056,7 @@ static void draw_chips(uint32_t rec, uint32_t aut, uint32_t rap, uint32_t mode, 
     x = chip(x, "REC", rec, C_RED);
     x = chip(x, "RAP", rap, C_YEL);
     x = chip(x, "AUTO", aut, C_CYAN);
-    x = chip(x, MODE_NAME[mode], 1, mode == M_TONE ? C_YEL : mode == M_SURF ? C_CYAN : C_MID);
+    x = chip(x, MODE_NAME[mode], 1, mode == M_TONE ? C_YEL : mode == M_SURF ? C_PINK : C_MID);
     x = chip(x, ham ? "HAM" : "LFO", ham ? 1u : lfo, ham ? C_RED : C_PINK);
     if (ham) x = chip(x, "LFO", lfo, C_PINK);
     if (x + 40 <= 240) chip(x, p, semi != 0, C_TXT);
@@ -1948,7 +2128,7 @@ static void app_main(void)
 
     for (k = 0; k < sizeof set; k++) ((uint8_t *)&set)[k] = 0;
     for (k = 0; k < FX_COUNT; k++) set.amt[k] = 7;
-    set.echo = 3; set.etime = 2; set.reach = 3; set.groove = 1; set.hard = 1; set.bpm = 100;
+    set.echo = 3; set.etime = 2; set.reach = 3; set.groove = 1; set.hard = 1; set.bpm = 140;
     set.glvl = 11; set.hook = ADLIB;
     set.lfo_rate = 6; set.lfo_depth = 8; set.torque = 3; set.space = 7; set.blvl = 11; set.width = 15; set.ver = 4; set.flow = 12;
     set.tune = 4; set.decay = 2; set.dlvl = 12; set.vlvl = 12; set.surf = 4;
@@ -1987,12 +2167,6 @@ static void app_main(void)
         rap_line[s] = -1;
     }
     for (k = 0; k < 27u; k++) held_word[k] = -1;
-    for (k = 0; k < NGROOVES; k++)              /* the grooves' lanes into drum masks */
-        for (s = 0; s < 16u; s++) {
-            uint32_t l, m = 0;
-            for (l = 0; l < 4u; l++) if (GROOVES[k].lane[l][s] == 'x') m |= 1u << GROOVES[k].drum[l];
-            groove_mask[k][s] = (uint16_t)m;
-        }
     for (k = 0; k < NTECH; k++) {               /* the techniques' faders into bits */
         const uint8_t *f = TECH[k].fd;
         uint32_t a, j;
@@ -2013,8 +2187,8 @@ static void app_main(void)
     draw_text_box(0, 84, 240, &FONT_L, "SKRATCH", C_CYAN, 1);
     draw_text_box(0, 116, 240, &FONT_L, "MASTER", C_CYAN, 1);
     draw_text_box(0, 150, 240, &FONT_L, "PRO", C_YEL, 1);
-    draw_text_box(0, 190, 240, &FONT_S, "7 strings down to A", C_GRY, 1);
-    draw_text_box(0, 210, 240, &FONT_S, "INFINITE SKRATCH", C_YEL, 1);
+    draw_text_box(0, 190, 240, &FONT_S, "808 + toys, deep cuts", C_GRY, 1);
+    draw_text_box(0, 210, 240, &FONT_S, "INFINITE MUTATE", C_PINK, 1);
     make_tones();
     bank[SURF_WORD].off = 0; bank[SURF_WORD].len = SURF_WIN - 64u; bank[SURF_WORD].loop = 0;   /* the window, read like a word */
     render_bank(set.voice);
@@ -2040,7 +2214,7 @@ static void app_main(void)
                 int32_t e2;
                 uint32_t turned = 0;
                 if ((e2 = fm1_enc_take(ENC_KNOB1)) != 0) { turned = 1; set.vlvl = (uint8_t)clampi(set.vlvl + e2, 0, 15); put_u(v, set.vlvl); TOAST("VOX", v); }
-                if ((e2 = fm1_enc_take(ENC_KNOB2)) != 0) { turned = 1; set.glvl = (uint8_t)clampi(set.glvl + e2, 0, 15); put_u(v, set.glvl); TOAST("GUITAR", v); }
+                if ((e2 = fm1_enc_take(ENC_KNOB2)) != 0) { turned = 1; set.glvl = (uint8_t)clampi(set.glvl + e2, 0, 15); put_u(v, set.glvl); TOAST("TOYS", v); }
                 if ((e2 = fm1_enc_take(ENC_KNOB3)) != 0) { turned = 1; set.blvl = (uint8_t)clampi(set.blvl + e2, 0, 15); put_u(v, set.blvl); TOAST("BASS", v); }
                 if ((e2 = fm1_enc_take(ENC_KNOB4)) != 0) { turned = 1; set.dlvl = (uint8_t)clampi(set.dlvl + e2, 0, 15); put_u(v, set.dlvl); TOAST("DRUMS", v); }
                 if ((e2 = fm1_enc_take(ENC_SELECT)) != 0) { turned = 1; set.space = (uint8_t)clampi(set.space + e2, 0, 15); put_u(v, set.space); TOAST("VERB", v); }
@@ -2071,16 +2245,16 @@ static void app_main(void)
                     t_boost = now;
                 } else {
                     const int32_t av = jog_v < 0 ? -jog_v : jog_v;
-                    {   /* samples a click: slow = fine control, fast = big throws; SURF moves 2.5x (its zones are long) */
-                        const int32_t sf = set.beat == M_SURF ? 5 : 2, g = (av * 12 + 120) * sf;
-                        p_jog_gain = g > 2000 * sf ? 2000 * sf : g;
+                    {   /* samples a click: slow = fine control, fast = big throws (the 2.x feel); SURF 4x (its zones are long, deep cuts) */
+                        const int32_t sf = set.beat == M_SURF ? 4 : 1, g = (av * 10 + 100) * sf;
+                        p_jog_gain = g > 1600 * sf ? 1600 * sf : g;
                     }
                     jog_total += e; jog_held = 1;
                 }
-            } else if (jog_held && now - t_jog > ((jog_v > 8 || jog_v < -8) ? 60u : 300u)) {   /* let go: a fast flick throws the record */
+            } else if (jog_held && now - t_jog > ((jog_v > 12 || jog_v < -12) ? 60u : 300u)) {   /* let go: a fast flick throws the record */
                 const int32_t av = jog_v < 0 ? -jog_v : jog_v;
                 jog_held = 0;
-                if (av > 8) {
+                if (av > 12) {
                     int32_t r = jog_v * p_jog_gain * 3 / 2;      /* clicks/s * samples/click / 44100 * 65536 */
                     {
                         const int32_t tc = (set.beat == M_SURF ? 32 : 16) * p_rate;
@@ -2109,7 +2283,7 @@ static void app_main(void)
             if (!pro && (e = fm1_enc_take(ENC_KNOB2)) != 0) {
                 if (shift && set.beat == M_SURF) { set.flow = (uint8_t)clampi(set.flow + e, 0, 15); put_u(v, set.flow); TOAST("FLOW", v); }   /* ECHO is on the MIXER */
                 else if (shift) { set.echo = (uint8_t)clampi(set.echo + e, 0, 15); put_u(v, set.echo); TOAST("ECHO", v); }
-                else { set.glvl = (uint8_t)clampi(set.glvl + e, 0, 15); put_u(v, set.glvl); TOAST("GUITAR", v); }
+                else { set.glvl = (uint8_t)clampi(set.glvl + e, 0, 15); put_u(v, set.glvl); TOAST("TOYS", v); }
                 knobs = dirty = 1;
             }
             if (!pro && (e = fm1_enc_take(ENC_KNOB3)) != 0) {
@@ -2126,7 +2300,7 @@ static void app_main(void)
             }
             if (!pro && (e = fm1_enc_take(ENC_PRESETS)) != 0) {
                 if (shift) { set.reach = (uint8_t)clampi(set.reach + e, 0, 7); put_u(v, set.reach + 1u); TOAST("REACH", v); }
-                else { set.groove = (uint8_t)clampi(set.groove + e, 0, NGROOVES - 1); TOAST("", GROOVES[set.groove].name); }
+                else { set.groove = (uint8_t)clampi(set.groove + e, 0, NGROOVES - 1); TOAST("", BEAT_NAME[set.groove]); }
                 knobs = dirty = 1;
             }
         }
@@ -2399,7 +2573,7 @@ static void app_main(void)
             } else {
                 char *p = put(put(bpm_s, ext_live ? "EXT" : MODE_NAME[set.beat]), " ");
                 put_u(p, ext_live ? ext_bpm : set.bpm);
-                now_s = bpm_s; now_c = ext_live ? C_YEL : C_CYAN;
+                now_s = bpm_s; now_c = ext_live ? C_YEL : set.beat == M_SURF ? C_PINK : C_CYAN;   /* SURF glows green */
             }
             key = (uint32_t)now_s[0] * 7u + (uint32_t)now_s[1] + (uint32_t)now_s[2] * 31u + (shift ? load_v * 977u : 0u) + rap_part_v * 13331u + rec * 1000u + (ext_live ? ext_bpm : set.bpm) * 3u + set.beat * 99991u + ext_live * 7777u;
             if (key != top_key) { top_key = key; draw_top(now_s, now_c, rec); }
@@ -2413,9 +2587,9 @@ static void app_main(void)
                     const uint32_t z = surf_abs_v >> ZSH;
                     zone_t zp;
                     zone_of(set.world, z, &zp);
-                    if (word_drawn != (int32_t)(1000u + (z & 0xFFFFFu) * 8u + zp.mat)) {
+                    if (word_drawn != (int32_t)(1000u + (z & 0xFFFFFu) * 16u + zp.mat)) {
                         char b2[20], *p2 = put(b2, ZNAME[zp.mat]);
-                        word_drawn = (int32_t)(1000u + (z & 0xFFFFFu) * 8u + zp.mat);
+                        word_drawn = (int32_t)(1000u + (z & 0xFFFFFu) * 16u + zp.mat);
                         p2 = put(p2, " ");
                         put_u(p2, z);
                         draw_big(b2, ZCOL[zp.mat]);
@@ -2469,7 +2643,7 @@ static void app_main(void)
                 knobs = 0;
                 if (fx_held && !shift && !lfo_held) {
                     a[0].label = "VOX"; put_u(a[0].val, set.vlvl); a[0].bar = set.vlvl; a[0].of = 15;
-                    a[1].label = "GUITAR"; put_u(a[1].val, set.glvl); a[1].bar = set.glvl; a[1].of = 15;
+                    a[1].label = "TOYS"; put_u(a[1].val, set.glvl); a[1].bar = set.glvl; a[1].of = 15;
                     a[2].label = "BASS"; put_u(a[2].val, set.blvl); a[2].bar = set.blvl; a[2].of = 15;
                     a[3].label = "DRUMS"; put_u(a[3].val, set.dlvl); a[3].bar = set.dlvl; a[3].of = 15;
                     c[0].label = "VERB"; put_u(c[0].val, set.space); c[0].bar = set.space; c[0].of = 15;
@@ -2485,7 +2659,7 @@ static void app_main(void)
                     c[2].label = "TORQUE"; put(c[2].val, TORQUE_NAME[set.torque]); c[2].bar = set.torque; c[2].of = 3;
                 } else if (!shift) {
                     a[0].label = FX_NAME[set.fx]; put_u(a[0].val, p_amt); a[0].bar = p_amt; a[0].of = 15;
-                    a[1].label = "GUITAR"; put_u(a[1].val, set.glvl); a[1].bar = set.glvl; a[1].of = 15;
+                    a[1].label = "TOYS"; put_u(a[1].val, set.glvl); a[1].bar = set.glvl; a[1].of = 15;
                     a[2].label = "BPM"; put_u(a[2].val, set.bpm); a[2].bar = set.bpm - 60u; a[2].of = 120;
                     if (set.beat == M_SURF) { a[3].label = "WORLD"; put_u(a[3].val, set.world); a[3].bar = set.world; a[3].of = 99; }
                     else { a[3].label = "VOICE"; put(a[3].val, VOICES[set.voice].name); a[3].bar = 0; a[3].of = 0; }
@@ -2493,7 +2667,7 @@ static void app_main(void)
                     if (set.beat == M_TONE) { c[1].label = "SOURCE"; put(c[1].val, TSRC_NAME[set.tsrc]); }
                     else { c[1].label = "STYLE"; put(c[1].val, set.style == SC_HYDRO ? "HYDRO" : SC_NAME[set.style]); }
                     c[1].of = 0;
-                    c[2].label = "GROOVE"; put(c[2].val, set.groove == 1u ? "BRUTAL" : GROOVES[set.groove].name);   /* the cell holds 11 */ c[2].of = 0;
+                    c[2].label = "BEAT"; put(c[2].val, BEAT_NAME[set.groove]);   /* the cell holds 11 */ c[2].of = 0;
                 } else {
                     a[0].label = "DROP"; put(a[0].val, DROP_NAME[set.tune]); a[0].bar = set.tune; a[0].of = 12;
                     if (set.beat == M_SURF) { a[1].label = "FLOW"; put_u(a[1].val, set.flow); a[1].bar = set.flow; a[1].of = 15; }

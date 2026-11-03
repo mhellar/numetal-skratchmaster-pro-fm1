@@ -1,0 +1,8 @@
+# 5.0 TOYBOX band only (drums 0)
+100 hold 0x40
+150 enc 5 -15
+250 hold 0
+300 btn 12
+20000 enc 6 6
+30000 enc 6 -5
+40000 end

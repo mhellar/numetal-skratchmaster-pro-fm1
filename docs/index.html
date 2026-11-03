@@ -150,7 +150,7 @@
   }
   .tape .hot { color: var(--rust); }
 
-  /* new in 3.0 */
+  /* new in 3.1 (and 3.0) */
   .feats { list-style: none; margin: 0 0 34px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 44px; }
   .feats li { position: relative; padding: 11px 0 11px 30px; border-bottom: 1px dashed #4a443c; font-size: 15px; color: #cfc6b1; }
   .feats li::before { content: "\25B6"; position: absolute; left: 2px; top: 13px; font-size: 13px; color: var(--rust); }
@@ -192,7 +192,7 @@
   <div class="readout" id="readout">FM-1 CUSTOM FIRMWARE &middot; <b>SIDE A</b></div>
   <button class="snd" id="snd" aria-pressed="false" hidden>&#9654; hear the cuts</button>
   <div class="over">
-    <a class="fire" href="#new" aria-label="New in version 3.0: INFINITE SKRATCH">
+    <a class="fire" href="#new" aria-label="New in version 3.1: TOYBOX + DEEP CUTS">
       <span class="burn" aria-hidden="true">
         <svg viewBox="0 0 100 120">
           <defs>
@@ -204,13 +204,13 @@
           <path class="f2" fill="url(#g2)" d="M50 119C30 119 18 106 19 88 20 72 33 64 34 46 44 56 46 66 45 74 52 64 58 50 55 32 72 47 82 66 81 87 80 106 68 119 50 119Z"/>
           <path class="f3" fill="url(#g3)" d="M50 119C36 119 28 110 29 98 30 86 39 80 41 68 48 76 50 82 49 90 55 84 59 76 58 64 69 76 73 88 71 100 69 112 61 119 50 119Z"/>
         </svg>
-        <b>3.0</b>
+        <b>3.1</b>
       </span>
-      <span class="lbl">INFINITE SKRATCH<small>NEW &middot; SEE WHAT BURNS &darr;</small></span>
+      <span class="lbl">TOYBOX + DEEP CUTS<small>NEW &middot; SEE WHAT BURNS &darr;</small></span>
     </a>
-    <p class="kicker">for the M-VAVE FM-1 &middot; v<span id="ver">3.0</span> &middot; GPL-3</p>
+    <p class="kicker">for the M-VAVE FM-1 &middot; v<span id="ver">3.1</span> &middot; GPL-3</p>
     <h1><span class="nu">NU//METAL</span><span class="sk">Skratchmaster</span><span class="stamp">PRO</span></h1>
-    <p class="sub">A robot turntablist, an endless record and a 7-string band in a pocket synth. Plug it in, drop the needle, flash it from this page.</p>
+    <p class="sub">A robot turntablist, an endless record and a mutating 808 beat played on toys, in a pocket synth. Plug it in, drop the needle, flash it from this page.</p>
   </div>
 </section>
 
@@ -245,42 +245,38 @@
 
 <section class="dark" id="new">
   <div class="wrap">
-    <h2 class="tape">NEW IN <span class="hot">3.0</span>: INFINITE SKRATCH</h2>
-    <p class="blurb">The FM-1 only has room for tiny samples, so 3.0 stops storing the record. In SURF mode the deck plays an endless record that is
-      computed as you scratch it, from where the needle is and which WORLD you're in. Scratch back over a spot and it's the same sound again, like vinyl.
-      Behind it, the band got heavier.</p>
+    <h2 class="tape">NEW IN <span class="hot">3.1</span>: TOYBOX + DEEP CUTS</h2>
+    <p class="blurb">The band is gone. Behind the deck now: one hard 808 beat that never stops changing, its melody on toys, and now and then a
+      little granular <i>poof</i>. And SURF cuts deeper: fat classic sounds, longer strokes, more low end, and the whole record glowing toxic green.</p>
 
     <div class="photos">
-      <figure class="photo"><img src="img/surf-landscape.png" alt="SURF mode: the record drawn as a colored landscape scrolling under the needle"><figcaption>SURF: the record as a landscape, the needle on CHIRP 35</figcaption></figure>
-      <figure class="photo"><img src="img/eternal-skratch.png" alt="ETERNAL SKRATCH: AUTO and SURF lit, the robot riding CHAOS 16"><figcaption>ETERNAL SKRATCH: the robot rides it forever</figcaption></figure>
-      <figure class="photo"><img src="img/splash-3.png" alt="The 3.0 start screen: 7 strings down to A, INFINITE SKRATCH"><figcaption>7 strings down to A</figcaption></figure>
+      <figure class="photo"><img src="img/toybox.png" alt="DJ mode over TOYBOX: TOYS 11, BPM 140, BEAT TOYBOX"><figcaption>TOYBOX: the 808 mutating under the deck</figcaption></figure>
+      <figure class="photo"><img src="img/surf-green.png" alt="SURF mode glowing green: the landscape and the surfer"><figcaption>SURF in toxic green</figcaption></figure>
+      <figure class="photo"><img src="img/surf-cut.png" alt="Scratching CUT 4 with a TEAR in SURF mode"><figcaption>a TEAR on CUT 4: FRESH, pitched down</figcaption></figure>
     </div>
 
     <ul class="feats">
-      <li><b>SURF MODE</b>A fourth HOME mode. The keys are 27 spots on an endless record; tap one to play its zone, hold it to scratch there in the STYLE.</li>
-      <li><b>SEVEN MATERIALS</b>Every 0.74 s zone is built one of seven ways, each with an attack, a body and a gap of crackle, like a battle record.</li>
-      <li><b>100 WORLDS</b>KNOB4 picks a different record. Each world leans on three materials, and turning it mid-sound morphs what's under the needle.</li>
-      <li><b>FLOW</b>EDIT + KNOB2. At 0 it's a battle record with gaps; from 10 up the gaps close and zones crossfade, so the record is one continuous landscape.</li>
-      <li><b>SURF DRIFT</b>EDIT + KNOB4. A held scratch wanders along the record while it loops, so a hold travels instead of sitting on one spot.</li>
-      <li><b>ETERNAL SKRATCH</b>GLO (AUTO) in SURF mode: the robot rides the record by itself, scratching, coasting and skipping waves. It doesn't repeat.</li>
-      <li><b>THE LANDSCAPE SCREEN</b>Zones scroll by as mountains in their material's color, the key spots are marked in yellow, and a little surfer rides the needle.</li>
-      <li><b>A HOTTER JOG</b>About 2.5x further per click, 2.5x more again in SURF, a snappier hand and easier throws. Flick it and coast through zone after zone.</li>
-      <li><b>7-STRING DROP A</b>A new guitar take: a hotter three-stage amp, a deep mid scoop, a thump at 100 Hz, and root + octave chugs that slam shut.</li>
-      <li><b>DIVES + SQUEALS</b>Whammy dives (an octave down in a quarter second) and pinch-harmonic squeals with finger vibrato, usable in any riff.</li>
-      <li><b>FOUR NEW GROOVES</b>BRUTAL TRUTH (grind blast), BAD DAY (half time), SEASICK (the second guitar a half step sharp, sliding down, the bass clanking) and DIVEBOMB.</li>
-      <li><b>MIDI CLOCK OVER TRS</b>With SYNC on FOLLOW the FM-1 locks to clock, Start and Stop on the TRS jack as well as USB.</li>
+      <li><b>INFINITE MUTATE</b>One hard 808 beat. Every bar a kick moves and takes its 808 with it, an 808 slides, a hat rolls in 32nds, a ghost lands. It never plays the same bar twice.</li>
+      <li><b>IT KEEPS A GROOVE</b>What wandered drifts back home, a little at a time. Every 8 bars the home moves on: it keeps what it became, or starts somewhere new.</li>
+      <li><b>TOYS</b>The melody on a toy piano, a music box, a xylophone, a kalimba or a toy organ. PRESETS picks one, or TOYBOX swaps them every 8 bars.</li>
+      <li><b>POOFS</b>Now and then a note goes poof: three tiny grains of the SAM words at a time, pitched to the note, and a breath. Or pick POOFS and every note does.</li>
+      <li><b>STAB + CUT</b>Two classic battle-record materials join SURF: a drop-A horn hit, and AHHH / FRESH pitched down. Half of every record is a classic now.</li>
+      <li><b>DEEPER STROKES</b>Held techniques throw the record 1.5x further in SURF, the jog 4x a click, hand and throws up to 32x. A low shelf under the deck, so the cuts growl.</li>
+      <li><b>THE GREEN GLOW</b>The SURF landscape glows toxic green: a shade per material, a bright ridge, a haze, a glow around the surfer.</li>
+      <li><b>TAMED TEARS</b>The faster the record goes, the darker it gets, in every mode, so fast scratches stay fat instead of shrill.</li>
     </ul>
 
-    <ul class="mats" aria-label="The seven materials">
-      <li style="color:#ff8c00">AHHH<em>FOF vowels</em></li>
-      <li style="color:#00e6ff">CHIRP<em>sweeps, lasers</em></li>
-      <li style="color:#dc3cff">FM<em>bells, screeches</em></li>
-      <li style="color:#96ff00">BYTE<em>bytebeat</em></li>
-      <li style="color:#ffdc00">DUST<em>SAM grains</em></li>
-      <li style="color:#ff3232">CHAOS<em>logistic map</em></li>
-      <li style="color:#c8d2c8">HISS<em>resonant noise</em></li>
+    <ul class="mats" aria-label="The toys">
+      <li style="color:#96ff00">TOYBOX<em>a new toy every 8 bars</em></li>
+      <li style="color:#00ff8c">TOY PIANO<em>struck tines</em></li>
+      <li style="color:#dcff96">MUSIC BOX<em>two octaves up</em></li>
+      <li style="color:#d2ff3c">XYLO<em>a hard knock</em></li>
+      <li style="color:#78be46">KALIMBA<em>plink, long tail</em></li>
+      <li style="color:#46d228">TOY ORGAN<em>squares, held</em></li>
+      <li style="color:#64ff14">POOFS<em>granular breaths</em></li>
     </ul>
-    <p class="fine" style="color:var(--fade)">Your saved 2.x settings carry over. The first boot of 3.0 sets the tuning to drop A once.</p>
+    <p class="fine" style="color:var(--fade)">Your 3.0 settings carry over, but the old groove number now picks a toy: turn PRESETS to TOYBOX and KNOB3 to about 140.
+      3.0 brought SURF mode and the INFINITE record: see <a href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#whats-new-in-30-infinite-skratch">3.0 in depth</a>.</p>
   </div>
 </section>
 
@@ -289,8 +285,8 @@
     <div>
       <h2 class="tape">QUICK START</h2>
       <ol class="steps">
-        <li><b>Install</b> from the box above. The FM-1 restarts on the 3.0 splash.</li>
-        <li>Press <kbd>PLAY</kbd>, then <kbd>ARP</kbd>. The band kicks in and the robot raps. Turn <kbd>PRESETS</kbd> for the groove: try BRUTAL TRUTH or SEASICK.</li>
+        <li><b>Install</b> from the box above. The FM-1 restarts on the 3.1 splash: INFINITE MUTATE.</li>
+        <li>Turn <kbd>PRESETS</kbd> to TOYBOX, press <kbd>PLAY</kbd>, then <kbd>ARP</kbd>. The 808 kicks in, the toys play, the robot raps, and the beat starts mutating. <kbd>KNOB2</kbd> = the toys' level.</li>
         <li>Press <kbd>HOME</kbd> until the chip says <b>SURF</b> (DJ, BEAT, TONE, SURF).</li>
         <li><b>Tap</b> a key to play a zone, <b>hold</b> it to scratch there. <kbd>ALGORITHM</kbd> picks the STYLE.</li>
         <li>Turn <kbd>SELECT</kbd> to surf the record by hand. Flick it and let go to coast.</li>
@@ -298,17 +294,17 @@
         <li>Tap <kbd>GLO</kbd> for ETERNAL SKRATCH, then take your hands off.</li>
       </ol>
       <h3 class="sub3">RECORD YOUR OWN LOOP</h3>
-      <p class="fine" style="margin-top:0">16 steps, one bar, under the groove: the row of squares on screen. Cyan = a word, yellow = a scratch, pink = drums.</p>
+      <p class="fine" style="margin-top:0">16 steps, one bar, under the beat: the row of squares on screen. Cyan = a word, yellow = a scratch, pink = drums.</p>
       <ol class="steps">
-        <li>With the band playing, press <kbd>REC</kbd>. The REC chip lights.</li>
-        <li><b>Tap</b> keys to drop words (or SURF spots) on the beat, <b>hold</b> one to record a scratch. In BEAT mode keys 1-12 stack drums on top of the groove. It snaps to the nearest 16th and keeps overdubbing as it loops.</li>
+        <li>With the beat playing, press <kbd>REC</kbd>. The REC chip lights.</li>
+        <li><b>Tap</b> keys to drop words (or SURF spots) on the beat, <b>hold</b> one to record a scratch. In BEAT mode keys 1-12 stack drums on top of the beat. It snaps to the nearest 16th and keeps overdubbing as it loops.</li>
         <li>Press <kbd>REC</kbd> again to stop recording. The loop keeps playing and saves itself when you stop.</li>
         <li>Hold <kbd>EDIT</kbd> (the shift) to clean up: <kbd>EDIT</kbd>+<kbd>SEQ</kbd> clears everything, <kbd>EDIT</kbd>+<kbd>REC</kbd> clears the words and keeps your drums, <kbd>EDIT</kbd>+<kbd>ARP</kbd> mutates it.</li>
       </ol>
     </div>
     <div>
       <a class="manual" href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#readme"><b>THE FULL MANUAL <i>&rarr;</i></b><span>Every key, knob and page, the sequencer, the 17 techniques, the LFO, the mixer, MIDI in and out, building it yourself.</span></a>
-      <a class="manual" href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#whats-new-in-30-infinite-skratch"><b>3.0 IN DEPTH <i>&rarr;</i></b><span>The seven materials, FLOW, WORLD, the new band and grooves.</span></a>
+      <a class="manual" href="https://github.com/mhellar/numetal-skratchmaster-pro-fm1#whats-new-in-31-toybox--deep-cuts"><b>3.1 IN DEPTH <i>&rarr;</i></b><span>How the beat mutates, the toys and the poofs, STAB and CUT, the deeper strokes.</span></a>
     </div>
   </div>
 </section>
@@ -323,7 +319,7 @@
 
     <h2 class="tape">TRACKLISTING</h2>
     <p class="blurb">SAM, the 1982 Software Automatic Mouth, says 27 words onto a virtual record and you cut them up with the keys and the jog wheel.
-      Behind you: double-tracked 7-string guitars, a bass and a twelve-piece kit locked to twelve grooves. Switch on RAP MODE and the robot takes the mic.</p>
+      Behind you: a hard 808 beat that mutates forever, its melody on toys, and a twelve-piece kit. Switch on RAP MODE and the robot takes the mic.</p>
     <div class="sides">
       <div class="side"><h3>SIDE A &middot; THE DECK</h3><ol>
         <li><span>01</span><div><b>17 TECHNIQUES</b><em>baby to crab to flare, each one drawn as a score</em></div></li>
@@ -331,10 +327,10 @@
         <li><span>03</span><div><b>HAMSTER / CURVE / TORQUE</b><em>flip the fader, shape it, weigh the platter</em></div></li>
         <li><span>04</span><div><b>AHHH + FRESH</b><em>the battle-record classics</em></div></li>
       </ol></div>
-      <div class="side"><h3>SIDE B &middot; THE BAND</h3><ol>
+      <div class="side"><h3>SIDE B &middot; THE TOYBOX</h3><ol>
         <li><span>05</span><div><b>A REAL LFO</b><em>11 synced rates, 7 shapes, 6 destinations</em></div></li>
         <li><span>06</span><div><b>TONE PLAY</b><em>the keys as a pitch fader</em></div></li>
-        <li><span>07</span><div><b>THE MIXER</b><em>vox, guitar, bass, drums, verb, echo, width</em></div></li>
+        <li><span>07</span><div><b>THE MIXER</b><em>vox, toys, 808, drums, verb, echo, width</em></div></li>
         <li><span>08</span><div><b>STUDIO GLUE</b><em>vocal chain, stereo plate, bus comp, soft limit</em></div></li>
       </ol></div>
     </div>
@@ -345,14 +341,14 @@
   <div class="wrap">
     <h2 class="tape">LINER NOTES</h2>
     <table>
-      <tr><td>PLAY, then ARP</td><td>the band kicks in and the robot raps</td></tr>
+      <tr><td>PLAY, then ARP</td><td>the 808 and the toys kick in and the robot raps</td></tr>
       <tr><td>tap / hold a key</td><td>say the word / scratch it in the STYLE you picked with ALGORITHM</td></tr>
       <tr><td>turn SELECT</td><td>scratch by hand; flick it, let go, and the record keeps spinning</td></tr>
       <tr><td>hold LFO + turn</td><td>the PRO page: rate, shape, depth, destination, reverb, curve, torque. Tap LFO for on/off</td></tr>
       <tr><td>hold FX + turn</td><td>the MIXER. Tap FX for the next effect</td></tr>
       <tr><td>HOME</td><td>DJ, BEAT (the kit on the keys), TONE (the keys as a pitch fader), SURF (the INFINITE record)</td></tr>
       <tr><td>in SURF</td><td>KNOB4 = WORLD, EDIT + KNOB2 = FLOW, EDIT + KNOB4 = SURF drift, GLO = ETERNAL SKRATCH</td></tr>
-      <tr><td>PRESETS</td><td>the groove: OFF, BRUTAL TRUTH, BAD DAY, JUMP, BREAKDOWN, RAP METAL, BOOM BAP, STOMP, TRAP, SLUDGE, SEASICK, DIVEBOMB</td></tr>
+      <tr><td>PRESETS</td><td>the toy over the mutating 808: OFF, TOYBOX, TOY PIANO, MUSIC BOX, XYLO, KALIMBA, TOY ORGAN, POOFS</td></tr>
       <tr><td>REC while playing</td><td>record your own 16-step loop: tap = a word, hold = a scratch, BEAT mode keys 1-12 = drums</td></tr>
       <tr><td>EDIT + SEQ / REC / ARP</td><td>clear the loop / clear only its words, keep the drums / MUTATE it</td></tr>
       <tr><td>hold EDIT</td><td>the second layer of every button, and the audio load</td></tr>
@@ -383,7 +379,7 @@
 import { Updater } from "./fm1ota.js";
 import { readPackage } from "./fwsc.js";
 
-const FIRMWARE = "firmware/numetal-pro-3.0.fwsc";     // a new release: put it in docs/firmware/ and change this
+const FIRMWARE = "firmware/numetal-pro-3.1.fwsc";     // a new release: put it in docs/firmware/ and change this
 const TRACK = "audio/scratch-techniques.mp3";          // tests/pro_techniques.txt through the host build
 const $ = (id) => document.getElementById(id);
 let pkg = null, busy = false, deck = null;

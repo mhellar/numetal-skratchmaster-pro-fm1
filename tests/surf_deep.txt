@@ -1,0 +1,23 @@
+# SURF deep cuts, world 0: held 2 s each on spots 1 CUT, 6 AHHH, 13 STAB, 4 CUT, 22 AHHH (no drums)
+100 btn 8
+200 btn 8
+300 btn 8
+600 keys 0x2
+2600 keys 0
+2800 keys 0x40
+4800 keys 0
+5000 keys 0x2000
+7000 keys 0
+7200 keys 0x10
+9200 keys 0
+9400 keys 0x400000
+11400 keys 0
+11600 keys 0x2
+13600 keys 0
+13800 keys 0x40
+15800 keys 0
+16000 keys 0x2000
+18000 keys 0
+18200 keys 0x10
+20200 keys 0
+21000 end
