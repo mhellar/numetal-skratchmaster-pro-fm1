@@ -2,319 +2,153 @@
 
 # NU//METAL SKRATCHMASTER PRO
 
-**A robot turntablist over a mutating 808 beat and a box of toys, for the M-VAVE FM-1. Version 3.1: TOYBOX + DEEP CUTS.**
+**A scratch instrument for the M-VAVE FM-1. Version 4.0: SKRATCH. Jog. Tap. Cut.**
 
-The FM-1 becomes a deck. SAM (the 1982 Software Automatic Mouth) says 27 words onto a virtual record, and you scratch
-them with the keys and the jog wheel. Or surf an endless record that is generated as you scratch it (SURF mode, new
-in 3.0, cutting deeper in 3.1). Behind you plays a hard 808 beat that never stops changing, its melody on toys: a toy
-piano, a music box, a xylophone, a kalimba, a toy organ, and now and then a granular *poof* (new in 3.1). In
-**RAP MODE** the robot is the MC: four bars of verse, where it raps rhyming lines that fit the beat, then four bars
-of hook, where it shouts the hook in a Melvins-style **GROWL**.
+The FM-1 becomes one turntable. SAM (the 1982 Software Automatic Mouth) says 27 words onto a virtual record, or the
+deck carries an endless record that is generated as you scratch it (a WORLD). Your left hand is on the jog, your right
+hand taps and holds the keys, and the four knobs are four effects you can ride at once. It follows your drum machine's
+MIDI clock, so it locks to the beat you are already playing.
 
-PRO adds what a turntablist expects from a real setup:
-
-- **A real LFO**, locked to the tempo (and to MIDI clock), with 7 shapes and 6 destinations, the deck's pitch and the
-  record itself among them
-- **17 scratch techniques**, each one scored the way TTM notation writes a scratch (the record's motion plus the
-  crossfader's clicks), and **COMBO** routines that string them together
-- **HAMSTER** switch, crossfader **CURVE**, turntable motor **TORQUE**
-- **TONE PLAY**: the keys become a pitch fader, for melodies on a tone, on AHHH or on any word
-- **AHHH** and **FRESH**, the two classic battle-record sounds
-- **A bigger sound engine**: a vocal chain, a stereo plate reverb, a glue compressor and a soft limiter
-- **A MIXER page** with faders and live meters
-- **An 808 kit as real samples** (new in 2.1), rendered offline in floating point
-- **MIDI for drummers and visuals** (new in 2.1): play the kit from an e-kit on the TRS input, and every drum and the
-  deck itself come out on USB-MIDI
+4.0 is a cut-down. Everything that got in the way of scratching is gone: RAP MODE, the TONE and BEAT modes, the step
+sequencer, the LFO page, the mixer, the 9-effect list and the band. What is left is the deck, the 17 techniques, the
+endless record, four knob FX and a drum beat to practise over.
 
 <p align="center">
-<img src="docs/img/scratch-score.png" width="240" alt="Scratching TRANSFORM: the technique's score on screen with a playhead">
-<img src="docs/img/pro-page.png" width="240" alt="The PRO page: the LFO, square at 1/8 on the FADER">
-<img src="docs/img/mixer.png" width="240" alt="The MIXER page: seven faders and meters">
+<img src="docs/img/s40-surf.png" width="240" alt="The main screen: a WORLD record scrolling under the needle, STUTTER at 1/16 on the knob strip">
+<img src="docs/img/s40-score.png" width="240" alt="Holding a key: the CHIRP technique drawn as a score with a playhead">
+<img src="docs/img/s40-settings.png" width="240" alt="The SETTINGS page: VOICE, FLOW, VERB, BEAT, BPM, REACH, TORQUE">
 </p>
 
-<p align="center"><img src="docs/scratch.gif" width="480" alt="Scratching BREAK IT DOWN on the FM-1"></p>
+<p align="center"><img src="docs/scratch.gif" width="480" alt="Scratching on the FM-1"></p>
 
-> **Status: 3.1, runs on the FM-1.** Identity `FM-1_926`, the same as NU//METAL SKRATCHMASTER 1.0: it installs over it.
+> **Status: 4.0, runs on the FM-1.** Identity `FM-1_926`: it installs over NU//METAL 1.0 and PRO 2.x / 3.x.
 > Installing firmware is at your own risk; M-VAVE's official firmware can be reinstalled at any time.
+> Want the old one back? [3.1 TOYBOX](https://github.com/mhellar/numetal-skratchmaster-pro-fm1/blob/f805ef7/README.md)
+> (RAP MODE, the sequencer, the LFO, the toys) is still in [docs/firmware](docs/firmware) as `numetal-pro-3.1.fwsc`.
 
 ## Install
 
 - **In the browser:** open the **[web installer](https://mhellar.github.io/numetal-skratchmaster-pro-fm1/)** in Chrome
   or Edge on a computer, plug the FM-1 in with a USB data cable, press **Install**. It uses Web MIDI, and nothing
   else needs to be installed.
-- **From the command line:** download `numetal-pro-3.1.fwsc` from [Releases](https://github.com/mhellar/numetal-skratchmaster-pro-fm1/releases/latest) (or [docs/firmware](docs/firmware)), then
-  `python3 tools/fm1_install.py numetal-pro-3.1.fwsc`
+- **From the command line:** download `numetal-pro-4.0.fwsc` from [docs/firmware](docs/firmware), then
+  `python3 tools/fm1_install.py numetal-pro-4.0.fwsc`
   (needs `pip3 install mido python-rtmidi`).
 - **Rescue:** hold **OCT-** while switching on. No sound, only the updater. Install anything from there.
 
-Coming from 1.0, the first start sets everything to defaults (the saved settings grew in 2.0). 2.1 keeps 2.0's
-settings. 3.0 keeps 2.x settings and sets the tuning to A once. 3.1 keeps 3.0's settings, but the old groove number
-now picks a toy: turn **PRESETS** to **TOYBOX**, and set **KNOB3** to about 140 BPM.
-
-### What's new in 3.1: TOYBOX + DEEP CUTS
-
-<p align="center">
-<img src="docs/img/toybox.png" width="240" alt="DJ mode over TOYBOX: TOYS level 11, BEAT TOYBOX">
-<img src="docs/img/surf-green.png" width="240" alt="SURF in toxic green: the landscape glowing under the surfer">
-<img src="docs/img/surf-cut.png" width="240" alt="Scratching CUT 4 with a TEAR in SURF mode">
-</p>
-
-**The band is gone. In its place is one hard 808 beat that MUTATES forever.** It starts from a home bar: kicks with a
-long, driven 808 under each one, a clap and a snare stacked on the backbeat, hats with a 32nd roll, and a little toy
-phrase played twice, the second time a bit different. Then, every bar:
-
-- one or two things change: a kick moves and takes its 808 with it, an 808 holds and **slides** to a new note, a hat
-  **rolls** in 32nds, a ghost snare or rim lands, an open hat, a double kick, a toy note changes or echoes;
-- each changed step has a chance to drift back home, so it wanders but keeps a groove;
-- every 8 bars the home itself moves on: it keeps what it became, or now and then starts somewhere new.
-
-It never plays the same thing twice.
-
-**PRESETS** picks what plays the melody:
-
-| BEAT | What you hear |
-| --- | --- |
-| **OFF** | drums and toys off, just the deck |
-| **TOYBOX** | the toy changes every 8 bars, and a note now and then goes **POOF** (the odds drift too) |
-| **TOY PIANO** | struck metal tines: FM at 3.5:1, the brightness dying first |
-| **MUSIC BOX** | two octaves up, a soft 3:1 ping |
-| **XYLO** | a hard 4:1 knock, short |
-| **KALIMBA** | a quick 6:1 plink and a long tail |
-| **TOY ORGAN** | two square waves an octave apart, a little out of tune, held |
-| **POOFS** | every note a granular poof: three grains of the SAM words at a time, pitched to the note, and a breath through a band-pass |
-
-**KNOB2** is now **TOYS** (their level), and on the MIXER the strips read TOY and 808. **TUNING** (EDIT + KNOB1) sets
-the key of the toys and the 808. **FILL** (hold SEQ) rolls the 808 under the snare. The toys sit a little wide (the
-right side ~9 ms late).
-
-**SURF cuts deep:**
-
-- Two classic battle-record materials join the seven: **STAB**, a horn / power-chord hit in drop A (stacked saws, a
-  fifth, a sub, driven), and **CUT**, a whole word off the bank (AHHH and FRESH most of all) pitched down. Half of
-  every record is now STAB, CUT or AHHH, so every WORLD sounds different from 3.0.
-- **AHHH** sits lower (60-187 Hz).
-- A held technique throws the record **1.5x further** in SURF (the window follows the stroke, so long strokes stay
-  smooth). The jog throws **4x** further a click in SURF, and the hand and the throws reach **32x**.
-- A low shelf (~+7 dB under 250 Hz) sits under the SURF deck, and fast strokes darken a little sooner, so they growl
-  instead of squeal.
-- **The landscape glows toxic green:** every material its own green, a bright ridge, a haze above it, a glow around
-  the surfer, green SURF chips.
-
-**Elsewhere:** fast scratches are tamed in every mode (the faster the record, the darker it gets), and the jog is back
-to the 2.x feel in DJ mode. The first screen says **INFINITE MUTATE**.
-
-### What's new in 3.0: INFINITE SKRATCH
-
-**SURF mode** (press HOME until the chip says SURF) puts an endless record on the deck. It is never stored. Every
-stretch is computed from where it is on the record and from the WORLD, so scratching back over a spot plays the same
-sound again, just like vinyl. The record is cut into zones of 0.74 s. Each one is a sample on a battle record with an
-attack, a body and a gap of crackle, and each is made in one of seven ways (3.1 adds STAB and CUT, see above):
-
-| Material | What it is |
-| --- | --- |
-| **AHHH** | a vowel built from FOF grains (a pulse every pitch period, three formants ringing off it), gliding, morphing a to o |
-| **CHIRP** | a tone sweeping octaves, or a LASER where the sweep repeats; sine, fat square, saw or sine + octave |
-| **FM** | two operators, the index decaying, rising or wobbling: bells, screeches |
-| **BYTE** | a bytebeat formula (`t*(t>>a\|t>>b)` and friends) read at the record's speed: 8-bit shrapnel |
-| **DUST** | the SAM words shattered into grains, re-pitched, some backwards, two streams overlapped |
-| **CHAOS** | the logistic map with r swept through its bifurcations: a tone splits into two, four, then noise |
-| **HISS** | noise through a resonant filter that sweeps: the record's whistle and its *kssh* |
-
-- **Keys** are 27 spots on the record. Tap one to play its zone, hold it to scratch there in the STYLE, and tap
-  again quickly for finger strokes.
-- **SURF** (EDIT + KNOB4, 0..15): a held scratch drifts along the record while it loops (0 = it stays on the spot).
-- **FLOW** (EDIT + KNOB2 in SURF mode, 0..15, default 12): 0 = a battle record, separate sounds with crackly gaps;
-  10 and up = no gaps, the sounds sustain and each zone crossfades into the next (up to 174 ms), so the record is one
-  continuous landscape.
-- **WORLD** (KNOB4, 0..99): a different record. Each world leans on three of the materials. Turning it while a
-  sound plays morphs the sound under the needle.
-- **The jog** surfs anywhere, far past the keys. Flick it and let go, and the record coasts through zone after zone.
-- **AUTO in SURF mode = ETERNAL SKRATCH:** the robot rides the record by itself. It plays on, scratches where it is,
-  and skips a wave or two, forever, never the same.
-- The screen shows the record as a landscape scrolling under the needle: each zone is a mountain in its material's
-  colour, the 27 key spots are marked in yellow, and a little surfer rides the needle. The big line names the
-  material and the zone (`CHAOS 12`).
-- REC records SURF spots into the steps like words.
-
-**The jog** is more sensitive: about 2.5x further a click, 2.5x more again in SURF mode, a snappier hand and easier
-throws.
-
-**A harder band** (replaced by TOYBOX in 3.1): the guitar was a 7-string in **drop A** (the default tuning; KNOB1 with EDIT still goes from
-F to F). The amp is hotter, with three stages, the last one lopsided like a rectifier, a deep mid scoop, a thump at
-100 Hz and a snarl at 3 kHz. Chugs are root + octave and slam shut. New grooves:
-
-- **SEASICK:** the second guitar plays the open chords a half step sharp and slides down onto the first. Dissonant
-  and woozy, and the bass clanks off the frets.
-- **DIVEBOMB:** whammy dives (an octave down in a quarter second) and a **pinch-harmonic squeal** with finger vibrato.
-- **BRUTAL TRUTH** (a grind blast, a chromatic tremolo riff) and **BAD DAY** (half time, seasick) replace BOUNCE and
-  B-BOY.
-
-Riffs can use the new moves in any groove: `a`..`k` = an open chord with a dive, `!` = the squeal.
-
-**MIDI clock over TRS:** the FM-1 follows MIDI clock (and Start / Stop) on the TRS input as well as on USB, with SYNC
-set to FOLLOW.
-
-### What's new in 2.1
-
-- **TRS MIDI IN** works: plug an e-kit (the map is set up for a Roland TD-8) or any MIDI gear into the FM-1's TRS
-  jack. Channel 10 uses the General MIDI drum map, and hits that land together (kick + crash) play together.
-- **MIDI out for visuals:** every drum the FM-1 plays (the band, the pads, the e-kit) goes out on USB-MIDI as a GM note
-  on channel 10, and the deck sends CC 20 (scratching 0/127), CC 21 (crossfader) and CC 22 (platter angle) on channel 1.
-- **The 808 kit:** kick, snare, clap, toms and a long saturated 808 bass, with the hats' and cymbals' aliasing fizz
-  filtered out.
-- **The guitar** is a drop-B take (plucked strings into an oversampled two-stage amp, tone stack and 4x12 cab),
-  double-tracked left and right. The kit and the guitar are 16-bit samples played at TUNE pitch; DECAY 0/1 shortens
-  them.
-- The audio load stays about 20 % at peak with the kit hammered.
+The saved settings changed shape in 4.0, so the first start sets everything to its defaults: the record on WORLD 0,
+the filter open, ECHO 3, SYNC on FOLLOW, 120 BPM.
 
 ## Play
 
-Press **PLAY**, then press **ARP** for RAP MODE. Tap a key: the robot says the word. Hold it: the word is scratched
-in time, in the STYLE. Turn **SELECT** to scratch by hand; flick it and let go, and the record spins on.
+1. Switch on. The FM-1 says its name and the record is **WLD 0** (an endless WORLD).
+2. **Tap a key** to drop the needle on one of 27 spots. **Hold a key** to scratch there in the technique that
+   **ALGORITHM** picks. Tap the same key again quickly for finger strokes.
+3. **Turn SELECT** to scratch by hand. Flick it and let go, and the record coasts on.
+4. Ride **KNOB1-4**: FILTER, ECHO, CRUSH, STUTTER. Hold **FX** to drop them all at once (DRY).
+5. Press **PLAY** for a drum beat to practise over, or plug in your drum machine's MIDI and it follows the clock.
 
-Three buttons open a page while you hold them, and the knobs change meaning while they are held: **EDIT** (the
-second layer, and the audio load), **LFO** (the PRO page) and **FX** (the MIXER). A quick tap still does what the
-button always did.
-
-| Key / button | Tap / hold | With **EDIT** held |
+| Encoder | Turn | **HOME** held + turn: SETTINGS |
 | --- | --- | --- |
-| **Keys** | DJ mode: 27 words (25 = AHHH, 26 = FRESH); tap = say it, hold = a tempo-synced scratch in the STYLE (in RAP MODE the last word you tap becomes the hook). BEAT mode: keys 1-12 = the kit (hold = roll), 13-27 = the first 15 words. TONE mode: the keys are a pitch fader (see TONE PLAY). SURF mode: 27 spots on the INFINITE record (see 3.0 above) | |
-| **PLAY** | start / stop | TAP tempo |
-| **REC** | record into the 16 steps (quantized, see [the sequencer](#the-sequencer-record-your-own-loop)) | clear the words, keep the drums |
-| **SEQ** | hold = FILL (snare roll, the 808 rolling, toms) | clear the steps |
-| **ARP** | RAP MODE: verse / hook, the robot MCs | MUTATE the steps |
-| **GLO** | AUTO: the robot scratches by itself (SURF mode: ETERNAL SKRATCH) | HARD: drums driven, the kick ducks the deck |
-| **FX** | tap = next FX, hold = the MIXER | previous FX |
-| **SEL** | hold = DROP (only the hats, then slam back in) | HAMSTER on / off |
-| **ENV** | hold = FREEZE (loop a sliver) | latch FREEZE |
-| **LFO** | tap = LFO on / off, hold = the PRO page | hold = CUT (the crossfader on 32nds) |
-| **HOME** | DJ / BEAT / TONE / SURF | pitch back to 0 |
-| **OCT- / OCT+** | the deck's pitch, a semitone | BACKSPIN / BRAKE |
-| **SAVE** | save everything now | SYNC: FOLLOW / OFF |
+| **SELECT** | JOG: scratch by hand. The faster you flick, the further each click throws the record | BPM 60..180 (when no clock comes in) |
+| **ALGORITHM** | TECHNIQUE: the 17 techniques and COMBO | REACH 1..8: how far a technique throws the record |
+| **KNOB1** | FILTER: LP 7 .. OPEN .. HP 7, a resonant low-pass to the left, a high-pass to the right | SAM VOICE: MC, GROWL, ROBOT, SAM, ELF, E.T., STUFFY, OLD LADY |
+| **KNOB2** | ECHO 0..15: a dotted-eighth echo locked to the tempo | FLOW 0..15 (WORLD records): 0 = separate sounds with gaps, 10+ = one continuous landscape |
+| **KNOB3** | CRUSH 0..15: fewer bits and a lower sample rate | VERB 0..15: the plate reverb |
+| **KNOB4** | STUTTER: OFF, 1/4, 1/8, 1/16, locked to the beat | BEAT 0..15: the practice drums' level (12 = normal) |
+| **PRESETS** | RECORD: WORDS, or WORLD 0..99 | motor TORQUE: LOW, MID, HIGH, MAX |
 
-| Encoder | Turn | **EDIT** held | **LFO** held: the PRO page | **FX** held: the MIXER |
-| --- | --- | --- | --- | --- |
-| **SELECT** | JOG: scratch by hand (velocity) | VELOCITY FX: the flick pumps the FX | SPACE (the plate) | VERB |
-| **ALGORITHM** | STYLE (TONE mode: SOURCE) | SWING | fader CURVE | ECHO |
-| **KNOB1** | the FX's amount | TUNING: the key of the toys and the 808, F .. F (A by default) | LFO RATE | VOX |
-| **KNOB2** | TOYS level | ECHO (SURF mode: FLOW) | LFO SHAPE | TOYS |
-| **KNOB3** | BPM 60..180 | KIT DECAY | LFO DEPTH | 808 |
-| **KNOB4** | SAM VOICE: MC GROWL ROBOT SAM ELF E.T. STUFFY OLD LADY (SURF mode: WORLD 0..99) | DRUMS level (SURF mode: SURF drift) | LFO DEST | DRUMS |
-| **PRESETS** | BEAT: OFF, TOYBOX, TOY PIANO, MUSIC BOX, XYLO, KALIMBA, TOY ORGAN, POOFS (one mutating 808 beat; see 3.1) | REACH | motor TORQUE | WIDTH |
-
-**FX:** FILTER, CRUSH, MEGAPHONE, DEMON, CRUNCH, STUTTER, REVERSE, WAH, GROWL.
-
-### The sequencer: record your own loop
-
-The sequencer is one bar of 16 steps (16th notes) that loops under the beat. It is the row of 16 squares across
-the middle of the screen: a **cyan** square says a word on that step, a **yellow** one scratches it, a **pink** dot
-adds drum hits, and the bright mark is the playhead. With SWING up, the odd steps lean late like the beat.
-
-**Record a loop**
-
-1. Press **PLAY** to start the beat. The sequencer only records while it's playing.
-2. Press **REC**. The REC chip, its light and a red dot in the top bar come on.
-3. Play over the beat. Hits snap to the nearest step, and a hit just before a step lands on that step without
-   playing twice.
-   - **Tap a key:** the word (or in SURF mode, the spot) goes on that step.
-   - **Hold a key:** the step becomes a scratch in the current STYLE, on the step where you pressed.
-   - **BEAT mode:** keys 1-12 stack drum hits onto the step, on top of the beat's own pattern. Keys 13-27 record
-     words.
-4. Recording stays on and the loop keeps going round, so you can overdub as you go. A step holds one word (a new
-   one replaces the old) and any number of drums.
-5. Press **REC** again to stop recording. The loop keeps playing.
-
-TONE mode isn't recorded. In RAP MODE a recorded word takes over the MC's line on that step.
-
-**Clear and change it (hold EDIT, the shift)**
-
-| Hold **EDIT** + | Does |
+| Button | Does |
 | --- | --- |
-| **SEQ** | CLEARED: wipe everything, the words, the scratches and the drums |
-| **REC** | NO WORDS: wipe the words and scratches, keep the drums you recorded |
-| **ARP** | MUTATE: flip a few ghost drum notes, drop in a new word or a scratch, and sometimes take one out |
+| **Keys** | 27 spots on the record. Tap = drop the needle, tap again quickly = finger strokes, hold = the technique while held, locked to the beat |
+| **PLAY** | the practice beat on / off |
+| **FX** | hold = DRY: every FX off while held |
+| **ENV** | hold = FREEZE: loop a sliver of the record |
+| **LFO** | hold = CUT: the crossfader chops on 32nds |
+| **REC** | BACKSPIN |
+| **SEQ** | BRAKE: the turntable winds down (works under an external clock too: only the record stops) |
+| **GLO** | AUTO: the robot scratches by itself. On a WORLD record it is ETERNAL SKRATCH: it rides the record forever |
+| **SEL** | HAMSTER: flip the crossfader in the techniques that click |
+| **ARP** | flip between WORDS and the last WORLD you used |
+| **HOME** | hold + turn = SETTINGS; tap = pitch back to 0 |
+| **OCT- / OCT+** | the deck's pitch, a semitone a press |
+| **SAVE** | save now (settings also save themselves when the deck is quiet) |
+| **EDIT + SAVE** | SYNC: FOLLOW an incoming MIDI clock / OFF |
+| **EDIT** (hold) | shows the button map and the audio load |
 
-Clearing only touches your loop; the beat keeps playing (and mutating). To start over: hold EDIT, press SEQ, press
-REC, and play again.
+The screen shows the record under the needle (the waveform of a word, or a WORLD scrolling by as a landscape), the
+technique's score while you hold a key, a 16-step bar with the playhead (yellow when it follows an external clock,
+green on its own BPM), the four FX, and chips for BEAT, AUTO, HAMSTER, SYNC and the pitch.
 
-**Saving:** the loop is saved with your settings once the beat is stopped and the deck is quiet, or right away
-with **SAVE**. It comes back the next time you switch the FM-1 on. (Plain SEQ, without EDIT, is FILL, not the
-sequencer. The 808 beat's own mutations never touch your loop.)
+### Playing with a drum machine
+
+Plug the drum machine's MIDI out into the FM-1's TRS input (or send clock over USB). With SYNC on FOLLOW (the
+default), the top bar says **EXT** and the tempo; ECHO, STUTTER, CUT and the held techniques all lock to it.
+Its **Start** puts the FM-1's bar back on the one, but it does not start the practice beat: your drum machine is the
+beat. Stop and Continue are ignored. Run the FM-1's audio into the same mixer.
+
+### The practice beat
+
+**PLAY** starts a drum beat, drums only: a swung boom bap with the kick, the snare on 2 and 4 and eighth-note hats.
+Most bars one small thing changes (a kick moves, a ghost snare, an open hat, a quick hat roll) and then drifts back.
+Every 8th bar ends in a fill (a snare roll, toms, flams or a hat roll) and the next bar can land on a crash. Now and
+then it moves on to a new pattern. Set its level with **HOME + KNOB4**.
+
+### The records
+
+**WORDS:** SAM says 27 words onto the record, one a key: a nu metal lexicon, the FM-1's name, and the battle-record
+classics AHHH and FRESH. The voice is set with HOME + KNOB1.
+
+**WORLD 0..99:** an endless record that is never stored. Every stretch is computed from where it is and from the
+WORLD, so scratching back over a spot plays the same sound again, just like vinyl. The record is cut into zones of
+0.74 s, each a sample on a battle record made from one of nine materials:
+
+| Material | What it is |
+| --- | --- |
+| **AHHH** | a vowel built from FOF grains, gliding and morphing a to o |
+| **CHIRP** | a tone sweeping octaves, or a LASER |
+| **FM** | two operators: bells, screeches |
+| **BYTE** | a bytebeat formula read at the record's speed: 8-bit shrapnel |
+| **DUST** | the SAM words shattered into grains, some backwards |
+| **CHAOS** | the logistic map swept through its bifurcations: a tone splits, then turns to noise |
+| **HISS** | noise through a sweeping resonant filter |
+| **STAB** | a horn / power-chord hit in drop A |
+| **CUT** | a whole word off the bank (AHHH and FRESH most of all), pitched down |
+
+Each WORLD leans on three materials. The keys are 27 spots, but the jog goes anywhere, far past them: flick it and the
+record coasts through zone after zone. The screen draws each zone as a mountain in its material's green, the key spots
+in yellow, and a little surfer riding the needle.
 
 ### The techniques
 
 BABY, DRAG, STAB, FORWARD, BACKWARD, CHIRP, TRANSFORM, TEAR, FLARE (1-click), 2-CLICK flare, ORBIT, CRAB, TWIDDLE,
 TAZER, SCRIBBLE, HYDROPLANE, LASER, and COMBO.
 
-Each technique is a score: key points for the record's motion (eased like a hand, linear, or accelerating) and the
-stretches where the crossfader is open, 64 ticks a beat, locked to the tempo. Hold a key and the word is scratched
-with it; while it plays, the screen draws the score with a playhead running over it. Turn STYLE while holding: the
-next loop plays the new technique. **COMBO** plays routines, a technique a beat in phrases of four that end on a
-flourish (AUTO plays whole routines).
-
-**HAMSTER** reverses the fader in the techniques that click: a chirp keeps only the peaks, and a crab cuts out
-instead of in. **CURVE** is the crossfader's cut: SHARP like a battle mixer, MEDIUM, SMOOTH. **TORQUE** is the motor:
-LOW winds up like a stock turntable when a word starts, MAX starts at once. It also sets how fast a thrown record
-settles and how long a BRAKE takes. Fast scratches are anti-aliased (the deck averages what it skips), so a hard tear
-stays clean.
-
-### The LFO
-
-Tap **LFO** to switch it on; its button pulses with it. Hold **LFO** for the PRO page:
-
-- **RATE** 4 BAR, 2 BAR, 1 BAR, 1/2, 1/4, 1/4T, 1/8, 1/8T, 1/16, 1/16T, 1/32
-- **SHAPE** SINE, TRI, SAW UP, SAW DN, SQUARE, S&H, DRIFT (a gliding S&H)
-- **DEPTH** 0..15
-- **DEST**
-  - **FX** sweeps the current FX (FILTER and WAH glide smoothly)
-  - **PITCH** from vibrato to a +-12 semitone siren
-  - **FADER** a tremolo; on SQUARE it is a transformer at the rate
-  - **PAN** moves the deck between left and right
-  - **RECORD** the LFO's hand on the record: deep, it rocks it back and forth, a baby scratch at the rate
-  - **BAND** sweeps a low-pass over the toys and the 808
-
-The LFO's phase is the song's position, so it sits on the grid, follows MIDI clock and restarts with PLAY.
-
-### TONE PLAY
-
-Press **HOME** until TONE. The keys are now a pitch fader: chromatic, with key 13 on the root of the TUNING,
-so you play in key. Hold a key and the record runs at that pitch with the fader open; let go and the fader shuts.
-**ALGORITHM** picks the SOURCE: TONE (a sine), BUZZ (a saw), AHHH, FRESH, YEAH, SCREAM, or the LAST WORD you said in
-DJ mode. The LFO on PITCH gives vibrato, and the LFO on FADER with SQUARE gives transformed tones.
+Each technique is a score: the record's motion and the stretches where the crossfader is open, 64 ticks a beat,
+locked to the tempo. Hold a key and the record is scratched with it while the screen draws the score with a playhead.
+Turn ALGORITHM while holding: the next loop plays the new technique. **COMBO** strings techniques into phrases of four
+that end on a flourish. **HAMSTER** reverses the fader in the techniques that click. **TORQUE** is the motor: LOW
+winds up like a stock turntable, MAX starts at once; it also sets how fast a thrown record settles and how long a
+BRAKE takes. Fast scratches get darker the faster they go, so a hard tear stays fat instead of shrill.
 
 ### The sound
 
-- **Vocals:** the post chain filters the 8-bit record's fizz, adds body under 250 Hz, then a fast compressor puts
-  the voice in front. An exciter adds air, and a doubler makes it wide while staying mono-safe (the copy sits only in
-  the side).
-- **Toys:** made live: FM tines with a ratio per toy, or square waves through a resonant filter, or POOF grains; the
-  right side ~9 ms late.
-- **808:** a sine driven hard, long, sliding on the ties.
-- **Drums:** an 808 kit, rendered offline as 16-bit samples.
-- **Space:** a stereo plate reverb holds the vocals, snare, claps, toms and the echo, and the RAP hook gets a reverb
-  throw.
-- **Master:** the bus runs into a glue compressor and a soft limiter, never a hard clip.
-- **Load:** hold EDIT to see the audio load; about 20 % at peak with the kit hammered.
-
-### The MIXER
-
-Hold **FX** and turn: VOX, TOYS, 808, DRUMS, VERB, ECHO and WIDTH (0 = mono: the toys, the doubler and the
-plate all in the middle). The screen shows seven fader strips with live meters.
-
-### Velocity skratch
-
-The keys have no velocity, so it is read from how fast you move. Flick the jog faster and each click throws the
-record further. Tap the same word again quickly for finger strokes, back and forth. With EDIT held the same moves
-pump the current FX instead, like a wah pedal.
+- **The deck:** the 8-bit record is filtered, given body under 250 Hz, compressed so it sits in front, and doubled
+  wide (mono-safe: the copy sits only in the side).
+- **The FX:** STUTTER re-cuts the record on the beat, FILTER and CRUSH shape it, ECHO throws it (and feeds the
+  reverb).
+- **The drums:** an 808 kit rendered offline as 16-bit samples, driven, and the kick ducks the deck a little.
+- **Space:** a stereo plate reverb (VERB).
+- **Master:** a glue compressor and a soft limiter, never a hard clip.
 
 ### MIDI
 
-**In** (USB or the TRS jack): channel 10 plays the kit on the General MIDI drum map (35 808, 36 kick, 37 rim, 38/40 snare, 39 clap, 42/44 hat,
-46 open hat, toms 41-50 + 58, 49/55/57 crash, 51/59 ride, 52 china, 53 zap); other channels, notes 48-74 = the 27 words.
-**Out** (USB): every drum played as a GM note on channel 10, and the deck on channel 1: CC 20 scratching (0/127), CC 21
-the crossfader, CC 22 the platter angle, sent on change. **SYNC FOLLOW** follows an
-incoming clock (USB or the TRS input), and Start / Stop / Continue drive PLAY. Send **CC 119** and it answers with
-CC 119 = the audio load in %.
+**In** (USB or the TRS jack): clock and Start (SYNC FOLLOW). Channel 10 plays the drum kit on the General MIDI map
+(35 808, 36 kick, 37 rim, 38/40 snare, 39 clap, 42/44 hat, 46 open hat, toms, 49/55/57 crash, 52 china, 53 zap).
+Other channels: notes 48-74 drop the needle on the 27 spots of the record that is on.
+**Out** (USB): every drum played as a GM note on channel 10, and the deck on channel 1: CC 20 scratching (0/127),
+CC 21 the crossfader, CC 22 the platter angle, sent on change. Send **CC 119** and it answers with CC 119 = the audio
+load in %.
 
 ## Build it
 
@@ -327,21 +161,18 @@ tools/get_toolchain.sh                      # JieLi's clang for the chip, to ~/.
 git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
     https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK
 
-tests/run_host.sh                           # on your computer: build/host/dinghy.wav + screen PNGs
-tests/run_pro.sh                            # the PRO scripts: techniques, tone play + LFO, the mixer (WAV + frames)
-tests/run_v3.sh                             # the 3.0 scripts: SURF, TRS clock (and the old groove scenes)
-tests/run_v31.sh                            # the 3.1 scripts: 64 bars of TOYBOX, the toys alone, SURF's deep cuts
-python3 tools/render_kit.py                 # re-render the 808 kit into firmware/gen/kit_pcm.h (needs numpy, scipy; the guitar it also renders is no longer used)
+tests/run_v40.sh                            # on your computer: a jam with a clock, the beat, the deep cuts (WAV + screens)
 ./build.sh                                  # -> build/dinghy.fwsc
-./build.sh --release 3.1                    # -> build/numetal-3.1.fwsc, "3.1" on the screen
+./build.sh --release 4.0                    # -> build/numetal-4.0.fwsc, "4.0" on the screen
 python3 tools/fm1_install.py build/dinghy.fwsc
 ```
 
 The whole app is [firmware/src/dinghy.c](firmware/src/dinghy.c). It is integer-only, because the chip has no FPU.
 The platform under it is [Dinghy](https://github.com/zvenson/dinghy): [docs/API.md](docs/API.md) has every call, and
 [docs/RULES.md](docs/RULES.md) has the chip's rules. The host build (`tests/host.c`) runs the same code on a computer.
-Its scripts can press keys, hold buttons (`T hold MASK`) and turn encoders (`T enc ID DELTA`), and it prints the
-audio code's cost per frame.
+Its scripts can press keys, hold buttons (`T hold MASK`), turn encoders (`T enc ID DELTA`) and send MIDI
+(`T midi ST D1 D2`), and it prints the audio code's cost per frame. Many of the older test scripts in `tests/`
+drive 3.x features that 4.0 removed. Why 4.0 cut what it cut: [PLAN_4.0.md](PLAN_4.0.md).
 
 The web installer is [docs/index.html](docs/index.html), served by GitHub Pages from `docs/`. Put a new package in
 `docs/firmware/` and change `FIRMWARE` at the top of the page's script.
