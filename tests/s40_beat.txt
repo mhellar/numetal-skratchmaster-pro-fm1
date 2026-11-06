@@ -1,0 +1,19 @@
+# 4.0: the practice beat (drums only) at 120, taps on the WORLD record
+300 btn 12
+2000 keys 0x1
+2150 keys 0
+6000 keys 0x8
+6150 keys 0
+10000 keys 0x40
+10150 keys 0
+14000 keys 0x200
+14150 keys 0
+18000 keys 0x1000
+18150 keys 0
+22000 keys 0x8000
+22150 keys 0
+26000 keys 0x40000
+26150 keys 0
+30000 keys 0x200000
+30150 keys 0
+34000 end

@@ -1,0 +1,3 @@
+# 4.0: the practice beat alone, 40 s at 120 (drums only)
+300 btn 12
+40300 end
